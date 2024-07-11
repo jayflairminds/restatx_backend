@@ -27,10 +27,10 @@ class Project(models.Model):
 
 class Loan(models.Model):
     loanid = models.AutoField(primary_key=True)
-    borrower_id = models.ForeignKey(User, related_name='borrower', on_delete=models.CASCADE)
-    lender_id = models.ForeignKey(User, related_name='lender', on_delete=models.CASCADE)
-    inspector_id = models.ForeignKey(User, related_name='inspector', on_delete=models.CASCADE)
-    project_id = models.ForeignKey(Project, on_delete=models.CASCADE)
+    borrower = models.ForeignKey(User, related_name='borrower', on_delete=models.CASCADE)
+    lender = models.ForeignKey(User, related_name='lender', on_delete=models.CASCADE)
+    inspector = models.ForeignKey(User, related_name='inspector', on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     loandescription = models.CharField(max_length=200)
     loantype = models.CharField(max_length=30)
     amount = models.DecimalField(max_digits=30, decimal_places=5)
@@ -47,7 +47,7 @@ class Loan(models.Model):
 
 class LoanDisbursementSchedule(models.Model):  # Corrected class name capitalization
     loan_disbursment_id = models.AutoField(primary_key=True)
-    loan_id = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
     draw_request = models.DecimalField(max_digits=30, decimal_places=5)
     amount = models.DecimalField(max_digits=30, decimal_places=5)
     date_requested = models.DateTimeField(null=True, blank=True)
