@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'knox',
     'users',
-    'project_details',
+    'construction',
     'corsheaders'
 ]
 
