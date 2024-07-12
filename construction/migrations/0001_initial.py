@@ -40,7 +40,7 @@ class Migration(migrations.Migration):
                 ('borrower_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='borrower', to=settings.AUTH_USER_MODEL)),
                 ('inspector_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='inspector', to=settings.AUTH_USER_MODEL)),
                 ('lender_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='lender', to=settings.AUTH_USER_MODEL)),
-                ('project_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='project_details.project')),
+                ('project_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='construction.project')),
             ],
         ),
         migrations.CreateModel(
@@ -52,7 +52,7 @@ class Migration(migrations.Migration):
                 ('date_requested', models.DateTimeField(blank=True, null=True)),
                 ('date_approved', models.DateTimeField(blank=True, null=True)),
                 ('disbursement_status', models.CharField(max_length=200)),
-                ('loan_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='project_details.loan')),
+                ('loan_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='construction.loan')),
             ],
         ),
     ]
