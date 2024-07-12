@@ -38,7 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'knox',
-    'users'
+    'users',
+    'construction',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -49,7 +51,23 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware'
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'x-requested-with',
+]
+# For specific URLs
+# CORS_ALLOWED_ORIGINS = [
+#     'https://example.com',
+#     'https://another-domain.com',
+# ]
 
 ROOT_URLCONF = 'core.urls'
 
