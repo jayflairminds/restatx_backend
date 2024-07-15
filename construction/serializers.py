@@ -9,8 +9,9 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 
 class LoanSerializer(serializers.ModelSerializer):
-    projectname = serializers.CharField(source='project.projectname', read_only=True)
-    address = serializers.CharField(source='project.address', read_only=True)
+    projectname = serializers.CharField(source="project.projectname", read_only=True)
+    address = serializers.CharField(source="project.address", read_only=True)
+
     class Meta:
         model = Loan
         fields = "__all__"
