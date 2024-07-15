@@ -25,10 +25,6 @@ class LoanListView(generics.ListAPIView):
             case "borrower":
                 loans = Loan.objects.filter(borrower_id=user)
 
-        # for loan in loans:
-        #     project_id = loan.project_id
-        #     project = Project.objects.filter(id= project_id)
-        #     loan.project_name = project.values
         loans = loans.select_related('project')
         return loans
     
