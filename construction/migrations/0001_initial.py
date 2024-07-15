@@ -15,44 +15,104 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Project',
+            name="Project",
             fields=[
-                ('id', models.AutoField(primary_key=True, serialize=False)),
-                ('address', models.CharField(max_length=50)),
-                ('projectname', models.CharField(max_length=50)),
-                ('startdate', models.DateTimeField(blank=True, null=True)),
-                ('enddate', models.DateTimeField(blank=True, null=True)),
-                ('project_type', models.CharField(choices=[('residential', 'Residential'), ('commercial', 'Commercial')], max_length=50)),
+                ("id", models.AutoField(primary_key=True, serialize=False)),
+                ("address", models.CharField(max_length=50)),
+                ("projectname", models.CharField(max_length=50)),
+                ("startdate", models.DateTimeField(blank=True, null=True)),
+                ("enddate", models.DateTimeField(blank=True, null=True)),
+                (
+                    "project_type",
+                    models.CharField(
+                        choices=[
+                            ("residential", "Residential"),
+                            ("commercial", "Commercial"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Loan',
+            name="Loan",
             fields=[
-                ('loanid', models.AutoField(primary_key=True, serialize=False)),
-                ('loandescription', models.CharField(max_length=200)),
-                ('loantype', models.CharField(max_length=30)),
-                ('amount', models.DecimalField(decimal_places=5, max_digits=30)),
-                ('start_date', models.DateTimeField(blank=True, null=True)),
-                ('end_date', models.DateTimeField(blank=True, null=True)),
-                ('interestrate', models.DecimalField(blank=True, decimal_places=5, max_digits=18, null=True)),
-                ('duration', models.CharField(blank=True, max_length=50, null=True)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('approved', 'Approved'), ('closed', 'Closed')], max_length=50)),
-                ('borrower_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='borrower', to=settings.AUTH_USER_MODEL)),
-                ('inspector_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='inspector', to=settings.AUTH_USER_MODEL)),
-                ('lender_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='lender', to=settings.AUTH_USER_MODEL)),
-                ('project_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='construction.project')),
+                ("loanid", models.AutoField(primary_key=True, serialize=False)),
+                ("loandescription", models.CharField(max_length=200)),
+                ("loantype", models.CharField(max_length=30)),
+                ("amount", models.DecimalField(decimal_places=5, max_digits=30)),
+                ("start_date", models.DateTimeField(blank=True, null=True)),
+                ("end_date", models.DateTimeField(blank=True, null=True)),
+                (
+                    "interestrate",
+                    models.DecimalField(
+                        blank=True, decimal_places=5, max_digits=18, null=True
+                    ),
+                ),
+                ("duration", models.CharField(blank=True, max_length=50, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("pending", "Pending"),
+                            ("approved", "Approved"),
+                            ("closed", "Closed"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                (
+                    "borrower_id",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="borrower",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "inspector_id",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="inspector",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "lender_id",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="lender",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "project_id",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="construction.project",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='LoanDisbursementSchedule',
+            name="LoanDisbursementSchedule",
             fields=[
-                ('loan_disbursment_id', models.AutoField(primary_key=True, serialize=False)),
-                ('draw_request', models.DecimalField(decimal_places=5, max_digits=30)),
-                ('amount', models.DecimalField(decimal_places=5, max_digits=30)),
-                ('date_requested', models.DateTimeField(blank=True, null=True)),
-                ('date_approved', models.DateTimeField(blank=True, null=True)),
-                ('disbursement_status', models.CharField(max_length=200)),
-                ('loan_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='construction.loan')),
+                (
+                    "loan_disbursment_id",
+                    models.AutoField(primary_key=True, serialize=False),
+                ),
+                ("draw_request", models.DecimalField(decimal_places=5, max_digits=30)),
+                ("amount", models.DecimalField(decimal_places=5, max_digits=30)),
+                ("date_requested", models.DateTimeField(blank=True, null=True)),
+                ("date_approved", models.DateTimeField(blank=True, null=True)),
+                ("disbursement_status", models.CharField(max_length=200)),
+                (
+                    "loan_id",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="construction.loan",
+                    ),
+                ),
             ],
         ),
     ]
