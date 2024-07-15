@@ -7,6 +7,7 @@ from .models import *
 from .models import Loan
 from .serializers import LoanSerializer
 
+
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
     permission_classes = [IsAuthenticated]
@@ -16,9 +17,9 @@ class LoanListView(generics.ListAPIView):
         profile = UserProfile.objects.get(user=user)
         print(profile.role_type)
         match profile.role_type:
-            case 'lender':
+            case "lender":
                 return Loan.objects.filter(lender_id=user)
-            case 'inspector':
+            case "inspector":
                 return Loan.objects.filter(inspector_id=user)
-            case 'borrower':
+            case "borrower":
                 return Loan.objects.filter(borrower_id=user)

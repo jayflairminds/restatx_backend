@@ -9,7 +9,14 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
 
-        fields = ("username", "password", "email", "first_name", "last_name","role_type")
+        fields = (
+            "username",
+            "password",
+            "email",
+            "first_name",
+            "last_name",
+            "role_type",
+        )
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {
@@ -32,5 +39,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data["last_name"],
         )
         # Save the role_type to the user profile
-        UserProfile.objects.create(user=user, role_type=validated_data["role_type"].lower())
+        UserProfile.objects.create(
+            user=user, role_type=validated_data["role_type"].lower()
+        )
         return user
