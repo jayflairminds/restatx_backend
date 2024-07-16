@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, Loan
+from .models import Project, Loan,LoanDisbursementSchedule
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -16,4 +16,10 @@ class LoanSerializer(serializers.ModelSerializer):
     inspector_name = serializers.CharField(source="inspector.username", read_only=True)
     class Meta:
         model = Loan
+        fields = "__all__"
+
+
+class LoanDisbursementScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanDisbursementSchedule
         fields = "__all__"
