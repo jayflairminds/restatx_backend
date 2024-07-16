@@ -24,7 +24,7 @@ class LoanListView(generics.ListAPIView):
             case "borrower":
                 loans = Loan.objects.filter(borrower_id=user)
 
-        loans = loans.select_related("project")
+        loans = loans.select_related("project","lender", "borrower","inspector")
         return loans
 
     def list(self, request, *args, **kwargs):
@@ -37,16 +37,17 @@ class LoanListView(generics.ListAPIView):
             "projectname",
             "address",
             "loandescription",
-            "amount",
+            "planned_disbursement_amount",
+            "requested_disbursement_amount",
             "status",
             "loantype",
             "start_date",
             "end_date",
             "interestrate",
             "duration",
-            "borrower",
-            "lender",
-            "inspector",
+            "borrower_name",
+            "lender_name",
+            "inspector_name",
             "project",
         }
 
