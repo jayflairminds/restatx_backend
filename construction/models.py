@@ -52,8 +52,10 @@ class Loan(models.Model):
 class LoanDisbursementSchedule(models.Model):  # Corrected class name capitalization
     loan_disbursment_id = models.AutoField(primary_key=True)
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
-    draw_request = models.DecimalField(max_digits=30, decimal_places=5)
-    amount = models.DecimalField(max_digits=30, decimal_places=5)
+    draw_request = models.IntegerField()
+    planned_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    requested_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    date_scheduled = models.DateTimeField(null=True, blank=True)
     date_requested = models.DateTimeField(null=True, blank=True)
     date_approved = models.DateTimeField(null=True, blank=True)
     disbursement_status = models.CharField(max_length=200)
