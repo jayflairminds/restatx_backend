@@ -57,3 +57,18 @@ class LoanListView(generics.ListAPIView):
         ]
 
         return Response(filtered_data)
+
+
+class LoanDisbursementScheduleDetail(generics.ListAPIView):
+    serializer_class = LoanDisbursementScheduleSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        user_loan_id = self.request.query_params.get("loan_id")
+        if user_loan_id is not None:
+            details = LoanDisbursementSchedule.objects.filter(loan_id = user_loan_id)
+            return details
+        else:
+            return []
+        
+    
