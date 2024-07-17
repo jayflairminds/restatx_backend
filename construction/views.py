@@ -71,4 +71,16 @@ class LoanDisbursementScheduleDetail(generics.ListAPIView):
         else:
             return []
         
+class BudgetDetail(generics.ListAPIView):
+    serializer_class = BudgetSerializer
+    permission_classes = [IsAuthenticated]
     
+    def get_queryset(self):
+        input_json = self.request.query_params
+        loan_id = input_json['loan_id']
+        budget_type = input_json['budget_type']
+        if loan_id is not None and budget_type is not None:
+            details = Budget.objects.filter(loan_id=loan_id, type=budget_type)
+            return details
+        else:
+            return [] 
