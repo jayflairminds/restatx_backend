@@ -4,7 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from users.models import UserProfile
 from .serializers import *
 from .models import *
-
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 from .models import Loan
 from .serializers import LoanSerializer
 
@@ -84,3 +86,24 @@ class BudgetDetail(generics.ListAPIView):
             return details
         else:
             return [] 
+
+class UpdateDisbursementStatus(APIView):
+    serializer_class = LoanDisbursementScheduleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        input_param = request.data
+        loan_disbursment_id = input_param.get('loan_disbursment_id')
+        status_action = input_param.get('status_action')
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+        try:
+            loan_disbursement = LoanDisbursementSchedule.objects.get( loan_disbursment_id=loan_disbursment_id)
+        except:
+            return Response({'error': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
+        print(loan_disbursement)
+        my_instance = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id)
+        my_instance.disbursement_status = status_action
+        my_instance.save(update_fields=['disbursement_status'])
+        return Response(status=status.HTTP_200_OK)
+        
