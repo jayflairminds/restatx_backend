@@ -49,7 +49,7 @@ class Loan(models.Model):
         return f"Loan {self.loanid}"
 
 
-class LoanDisbursementSchedule(models.Model):  # Corrected class name capitalization
+class LoanDisbursementSchedule(models.Model):
     loan_disbursment_id = models.AutoField(primary_key=True)
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
     draw_request = models.IntegerField()
@@ -62,3 +62,24 @@ class LoanDisbursementSchedule(models.Model):  # Corrected class name capitaliza
 
     def __str__(self):
         return f"Loan disbursement {self.loan_disbursment_id}"
+
+class Budget(models.Model):
+    id = models.AutoField(primary_key=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    type = models.CharField(max_length=50)
+    concrete = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    steel = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    interior = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    carpentery = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    doors = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    windows = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    glass = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    tiles = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    carpet = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    painting = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    lift = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    garden = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+
+    def __str__(self):
+        return self.id
