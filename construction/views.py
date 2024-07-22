@@ -109,12 +109,12 @@ class UpdateDisbursementStatus(APIView):
         elif profile.role_type == "inspector":
             if status_action == "Approve":
                 update_status = "Pending Disbursement"
-            if status_action == "Request More Information from Borrower":
+            if status_action == "Request More Information From Borrower":
                 update_status = "Pending Borrower"
         elif profile.role_type == "lender":
-            if status_action == "Request Information from Inspector":
+            if status_action == "Request Information From Inspector":
                 update_status = "Pending Inspection"
-            if status_action == "Request Information from Borrower":
+            if status_action == "Request Information From Borrower":
                 update_status = "Pending Borrower"
             if status_action == "Approve":
                 update_status = "Approved"
