@@ -94,7 +94,7 @@ class UpdateDisbursementStatus(APIView):
     serializer_class = LoanDisbursementScheduleSerializer
     permission_classes = [IsAuthenticated]
 
-    def put(self, request):
+    def post(self, request):
         input_param = request.data
         loan_disbursment_id = input_param.get('loan_disbursment_id')
         status_action = input_param.get('status_action')
