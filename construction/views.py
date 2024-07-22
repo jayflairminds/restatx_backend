@@ -70,7 +70,7 @@ class LoanDisbursementScheduleDetail(generics.ListAPIView):
     def get_queryset(self):
         user_loan_id = self.request.query_params.get("loan_id")
         if user_loan_id is not None:
-            details = LoanDisbursementSchedule.objects.filter(loan_id = user_loan_id)
+            details = LoanDisbursementSchedule.objects.filter(loan_id = user_loan_id).order_by('draw_request')
             return details
         else:
             return []
@@ -101,11 +101,12 @@ class UpdateDisbursementStatus(APIView):
         profile = UserProfile.objects.get(user=user)
 
         if profile.role_type == "borrower":
-            if status_action == "Request for Disbursement":
+            if status_action == "Request For Disbursement":
                 update_status = "Pending Inspection"
                 my_instance = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id)
                 my_instance.date_requested = datetime.datetime.now()
-                my_instance.save(update_fields=['date_requested'])
+                my_instance.requested_disbursement_amount = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id).planned_disbursement_amount 
+                my_instance.save(update_fields=['date_requested','requested_disbursement_amount'])
         elif profile.role_type == "inspector":
             if status_action == "Approve":
                 update_status = "Pending Disbursement"
