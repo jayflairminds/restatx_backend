@@ -83,3 +83,43 @@ class Budget(models.Model):
 
     def __str__(self):
         return self.id
+    
+class ContingencyStatus(models.Model):
+    id = models.AutoField(primary_key=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    review_months = models.IntegerField()
+    cost_to_complete = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+    total_direct_cost_budget = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+
+    def __str__(self):
+        return self.id
+
+class ScheduleStatus(models.Model):
+    id = models.AutoField(primary_key=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    review_months = models.IntegerField()
+    deviation_from_schedule_weeks = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+
+    def __str__(self):
+        return self.id
+
+class DisbursementSchedule(models.Model):
+    id = models.AutoField(primary_key=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    theoretical = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+    actual = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+    review_months = models.IntegerField()
+
+    def __str__(self):
+        return self.id
+
+ 
+class ConstructionStatus(models.Model):
+    id = models.AutoField(primary_key=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
+    milestone = models.CharField(max_length=50)
+    percentage_completion = models.DecimalField(max_digits=30, decimal_places=2,null=True)
+    review_months = models.IntegerField()
+
+    def __str__(self):
+        return self.id    
