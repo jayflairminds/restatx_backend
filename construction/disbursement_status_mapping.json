@@ -1,5 +1,5 @@
 {
-    "borrower" : ["Request for Disbursement"],
-    "inspector" : ["Approve","Request More Information from Borrower"],
-    "lender": ["Request Information from Inspector","Request Information from Borrower","Approve","Complete"]
+    "borrower" : ["Request For Disbursement"],
+    "inspector" : ["Approve","Request More Information From Borrower"],
+    "lender": ["Request Information From Inspector","Request Information From Borrower","Approve","Complete"]
 }

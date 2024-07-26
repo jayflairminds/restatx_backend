@@ -8,7 +8,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
-from .serializers import LoanSerializer
+from .serializers import *
 import datetime
 import json
 
@@ -42,8 +42,7 @@ class LoanListView(generics.ListAPIView):
             "projectname",
             "address",
             "loandescription",
-            "planned_disbursement_amount",
-            "requested_disbursement_amount",
+            "amount",
             "status",
             "loantype",
             "start_date",
@@ -71,7 +70,7 @@ class LoanDisbursementScheduleDetail(generics.ListAPIView):
     def get_queryset(self):
         user_loan_id = self.request.query_params.get("loan_id")
         if user_loan_id is not None:
-            details = LoanDisbursementSchedule.objects.filter(loan_id = user_loan_id)
+            details = LoanDisbursementSchedule.objects.filter(loan_id = user_loan_id).order_by('draw_request')
             return details
         else:
             return []
@@ -94,7 +93,7 @@ class UpdateDisbursementStatus(APIView):
     serializer_class = LoanDisbursementScheduleSerializer
     permission_classes = [IsAuthenticated]
 
-    def put(self, request):
+    def post(self, request):
         input_param = request.data
         loan_disbursment_id = input_param.get('loan_disbursment_id')
         status_action = input_param.get('status_action')
@@ -102,20 +101,21 @@ class UpdateDisbursementStatus(APIView):
         profile = UserProfile.objects.get(user=user)
 
         if profile.role_type == "borrower":
-            if status_action == "Request for Disbursement":
+            if status_action == "Request For Disbursement":
                 update_status = "Pending Inspection"
                 my_instance = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id)
                 my_instance.date_requested = datetime.datetime.now()
-                my_instance.save(update_fields=['date_requested'])
+                my_instance.requested_disbursement_amount = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id).planned_disbursement_amount 
+                my_instance.save(update_fields=['date_requested','requested_disbursement_amount'])
         elif profile.role_type == "inspector":
             if status_action == "Approve":
                 update_status = "Pending Disbursement"
-            if status_action == "Request More Information from Borrower":
+            if status_action == "Request More Information From Borrower":
                 update_status = "Pending Borrower"
         elif profile.role_type == "lender":
-            if status_action == "Request Information from Inspector":
+            if status_action == "Request Information From Inspector":
                 update_status = "Pending Inspection"
-            if status_action == "Request Information from Borrower":
+            if status_action == "Request Information From Borrower":
                 update_status = "Pending Borrower"
             if status_action == "Approve":
                 update_status = "Approved"
@@ -151,3 +151,26 @@ class ReturnDisbursementStatusMapping(APIView):
             case 'lender':
                 output = status_dictionary['lender']
                 return Response(output)
+
+class DashboardGraph(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        graph_name = input_json.get('graph_name')
+
+        match graph_name:
+            case 'contingency_status_graph':
+                queryset = ContingencyStatus.objects.filter(loan_id =loan_id)
+                serializer = ContingencyStatusSerializer(queryset, many=True)
+            case 'schedule_status_graph':
+                queryset = ScheduleStatus.objects.filter(loan_id =loan_id)
+                serializer = ScheduleStatusSerializer(queryset, many=True)
+            case 'disbursement_schedule_graph':
+                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
+                serializer = DisbursementScheduleSerializer(queryset, many=True)
+            case 'disbursement_schedule_graph':
+                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
+                serializer = DisbursementScheduleSerializer(queryset, many=True)
+        return Response(serializer.data)
