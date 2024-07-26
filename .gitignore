@@ -2,3 +2,4 @@
 /users/migrations
 /users/__pycache__/
 __pycache__/
+.env
