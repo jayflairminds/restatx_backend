@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Project, Loan,LoanDisbursementSchedule,Budget
+from .models import *
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -27,4 +27,24 @@ class LoanDisbursementScheduleSerializer(serializers.ModelSerializer):
 class BudgetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Budget
+        fields = "__all__"
+
+class ContingencyStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContingencyStatus
+        fields = "__all__"
+
+class ScheduleStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduleStatus
+        fields = "__all__"
+
+class DisbursementScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DisbursementSchedule
+        fields = "__all__"
+
+class ConstructionStatusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConstructionStatus
         fields = "__all__"
