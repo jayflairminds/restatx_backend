@@ -170,7 +170,7 @@ class DashboardGraph(APIView):
             case 'disbursement_schedule_graph':
                 queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
                 serializer = DisbursementScheduleSerializer(queryset, many=True)
-            case 'disbursement_schedule_graph':
-                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
-                serializer = DisbursementScheduleSerializer(queryset, many=True)
+            case 'construction_status_graph':
+                queryset = ConstructionStatus.objects.filter(loan_id =loan_id)
+                serializer = ConstructionStatusSerializer(queryset, many=True)
         return Response(serializer.data)
