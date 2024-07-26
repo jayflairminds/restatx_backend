@@ -8,7 +8,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
-from .serializers import LoanSerializer
+from .serializers import *
 import datetime
 import json
 
@@ -151,3 +151,26 @@ class ReturnDisbursementStatusMapping(APIView):
             case 'lender':
                 output = status_dictionary['lender']
                 return Response(output)
+
+class DashboardGraph(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        graph_name = input_json.get('graph_name')
+
+        match graph_name:
+            case 'contingency_status_graph':
+                queryset = ContingencyStatus.objects.filter(loan_id =loan_id)
+                serializer = ContingencyStatusSerializer(queryset, many=True)
+            case 'schedule_status_graph':
+                queryset = ScheduleStatus.objects.filter(loan_id =loan_id)
+                serializer = ScheduleStatusSerializer(queryset, many=True)
+            case 'disbursement_schedule_graph':
+                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
+                serializer = DisbursementScheduleSerializer(queryset, many=True)
+            case 'disbursement_schedule_graph':
+                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
+                serializer = DisbursementScheduleSerializer(queryset, many=True)
+        return Response(serializer.data)
