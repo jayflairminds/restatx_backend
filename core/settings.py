@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "users",
     "construction",
     "corsheaders",
+    "doc_summary_qna",
 ]
 
 MIDDLEWARE = [
