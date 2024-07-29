@@ -162,15 +162,15 @@ class DashboardGraph(APIView):
 
         match graph_name:
             case 'contingency_status_graph':
-                queryset = ContingencyStatus.objects.filter(loan_id =loan_id)
+                queryset = ContingencyStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ContingencyStatusSerializer(queryset, many=True)
             case 'schedule_status_graph':
-                queryset = ScheduleStatus.objects.filter(loan_id =loan_id)
+                queryset = ScheduleStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ScheduleStatusSerializer(queryset, many=True)
             case 'disbursement_schedule_graph':
-                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id)
+                queryset = DisbursementSchedule.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = DisbursementScheduleSerializer(queryset, many=True)
             case 'construction_status_graph':
-                queryset = ConstructionStatus.objects.filter(loan_id =loan_id)
+                queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ConstructionStatusSerializer(queryset, many=True)
         return Response(serializer.data)
