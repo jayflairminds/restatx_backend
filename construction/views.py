@@ -11,6 +11,7 @@ from .models import Loan
 from .serializers import *
 import datetime
 import json
+from django.db.models import Max
 
 
 
@@ -172,5 +173,9 @@ class DashboardGraph(APIView):
                 serializer = DisbursementScheduleSerializer(queryset, many=True)
             case 'construction_status_graph':
                 queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
+                serializer = ConstructionStatusSerializer(queryset, many=True)
+            case 'construction_expenditure_graph':
+                max_review_month = ConstructionStatus.objects.filter(loan_id=loan_id).aggregate(Max('review_months'))['review_months__max']
+                queryset = ConstructionStatus.objects.filter(loan_id=loan_id,review_months=max_review_month) 
                 serializer = ConstructionStatusSerializer(queryset, many=True)
         return Response(serializer.data)
