@@ -1,4 +1,4 @@
-.venv
+.venv/
 /users/migrations
 /users/__pycache__/
 __pycache__/
