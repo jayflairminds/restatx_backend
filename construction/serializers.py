@@ -48,3 +48,13 @@ class ConstructionStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConstructionStatus
         fields = "__all__"
+
+class BudgetMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BudgetMaster
+        fields = "__all__"
+
+class DrawTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrawTracking
+        fields = "__all__"
