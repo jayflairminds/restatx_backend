@@ -206,7 +206,6 @@ class Budget(APIView):
         try :
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            print(loan_id)
             queryset = BudgetMaster.objects.filter(loan_id = loan_id)
             response = BudgetMasterSerializer(queryset,many=True)
             return Response(response.data,status=status.HTTP_200_OK)
