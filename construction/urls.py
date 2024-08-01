@@ -8,4 +8,5 @@ urlpatterns = [
     path("update-disbursement-status/",UpdateDisbursementStatus.as_view(),name="update-disbursement-status"),
     path("disbursement-status-mapping/",ReturnDisbursementStatusMapping.as_view(),name="disbursement-status-mapping"),
     path("dashboard-graph/",DashboardGraph.as_view(),name="dashboard-graph"),
+    path("insert-budget-master/",UpdateBudget.as_view(),name='insert-budget-master')
 ]

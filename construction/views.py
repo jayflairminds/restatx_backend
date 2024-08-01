@@ -179,3 +179,15 @@ class DashboardGraph(APIView):
                 queryset = ConstructionStatus.objects.filter(loan_id=loan_id,review_months=max_review_month) 
                 serializer = ConstructionStatusSerializer(queryset, many=True)
         return Response(serializer.data)
+    
+class UpdateBudget(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        serializer = BudgetMasterSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+            
