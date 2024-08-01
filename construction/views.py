@@ -180,7 +180,7 @@ class DashboardGraph(APIView):
                 serializer = ConstructionStatusSerializer(queryset, many=True)
         return Response(serializer.data)
     
-class UpdateBudget(APIView):
+class Budget(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
@@ -190,4 +190,25 @@ class UpdateBudget(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-            
+    def put(self, request,id):
+        try:
+            budget = BudgetMaster.objects.get(pk=id)
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = BudgetMasterSerializer(budget, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self,request):
+        try :
+            input_param = request.query_params
+            loan_id = input_param.get('loan_id')
+            print(loan_id)
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id)
+            response = BudgetMasterSerializer(queryset,many=True)
+            return Response(response.data,status=status.HTTP_200_OK)
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST)      
