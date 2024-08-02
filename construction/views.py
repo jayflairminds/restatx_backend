@@ -202,12 +202,24 @@ class Budget(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    def get(self,request):
+    def get(self,request,*args, **kwargs):
         try :
             input_param = dict(request.query_params)
             loan_id = int(input_param.get('loan_id')[0])
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id)
-            response = BudgetMasterSerializer(queryset,many=True)
-            return Response(response.data,status=status.HTTP_200_OK)
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
+            output_lis = list()
+            for out in queryset:
+                output_dict = dict()
+                output_dict["id"] = out[0]
+                output_dict['loan_id'] = out[1]
+                output_dict['project_total'] = out[2]
+                output_dict['loan_budget'] = out[3]
+                output_dict['acquisition_loan'] = out[4]
+                output_dict['building_loan'] = out[5]
+                output_dict['project_loan'] = out[6]
+                output_dict['mezzanine_loan'] = out[7]
+                output_dict['uses'] = out[8]
+                output_lis.append(output_dict)
+            return Response(output_lis,status=status.HTTP_200_OK)
         except:
             return Response(status=status.HTTP_400_BAD_REQUEST)      
