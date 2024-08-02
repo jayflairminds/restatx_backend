@@ -127,16 +127,17 @@ class ConstructionStatus(models.Model):
 class BudgetMaster(models.Model):
     id = models.AutoField(primary_key=True)
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE)
-    project_total = models.IntegerField()
-    loan_budget = models.IntegerField()
-    acquisition_loan = models.IntegerField()
-    building_loan = models.IntegerField()
-    project_loan = models.IntegerField()
-    mezzanine_loan = models.IntegerField()
-    current_reviesed_budget = models.IntegerField()
-    total_funded = models.IntegerField()
-    remaining_to_fund = models.IntegerField()
-    total_funded_percentage = models.IntegerField()
+    project_type = models.CharField(max_length=50,null=True)
+    project_total = models.IntegerField(null= True,blank=True)
+    loan_budget = models.IntegerField(null= True,blank=True)
+    acquisition_loan = models.IntegerField(null= True,blank=True)
+    building_loan = models.IntegerField(null= True,blank=True)
+    project_loan = models.IntegerField(null= True,blank=True)
+    mezzanine_loan = models.IntegerField(null= True,blank=True)
+    current_revised_budget = models.IntegerField(null= True,blank=True)
+    total_funded = models.IntegerField(null= True,blank=True)
+    remaining_to_fund = models.IntegerField(null= True,blank=True)
+    total_funded_percentage = models.IntegerField(null= True,blank=True)
     uses = models.CharField(max_length=50)
 
     def __str__(self):
@@ -144,7 +145,7 @@ class BudgetMaster(models.Model):
     
 class DrawTracking(models.Model):
     id = models.AutoField(primary_key=True)
-    budget_mastser = models.ForeignKey(BudgetMaster, on_delete=models.CASCADE)
+    budget_master = models.ForeignKey(BudgetMaster, on_delete=models.CASCADE)
     draw_request = models.IntegerField()
     planned_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     requested_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
