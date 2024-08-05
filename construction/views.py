@@ -206,7 +206,8 @@ class Budget(APIView):
         try :
             input_param = dict(request.query_params)
             loan_id = int(input_param.get('loan_id')[0])
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
+            uses_type = input_param.get('uses_type')[0]
+            queryset = BudgetMaster.objects.filter(loan_id=loan_id,uses_type = uses_type).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
             output_lis = list()
             for out in queryset:
                 output_dict = dict()
