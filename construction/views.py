@@ -11,7 +11,7 @@ from .models import Loan
 from .serializers import *
 import datetime
 import json
-from django.db.models import Max
+from django.db.models import Max,Sum
 
 
 
@@ -204,9 +204,9 @@ class Budget(APIView):
     
     def get(self,request,*args, **kwargs):
         try :
-            input_param = dict(request.query_params)
-            loan_id = int(input_param.get('loan_id')[0])
-            uses_type = input_param.get('uses_type')[0]
+            input_param = request.query_params
+            loan_id = int(input_param.get('loan_id'))
+            uses_type = input_param.get('uses_type')
             queryset = BudgetMaster.objects.filter(loan_id=loan_id,uses_type = uses_type).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
             output_lis = list()
             for out in queryset:
@@ -224,3 +224,17 @@ class Budget(APIView):
             return Response(output_lis,status=status.HTTP_200_OK)
         except:
             return Response(status=status.HTTP_400_BAD_REQUEST)      
+        
+class BudgetSummary(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        input_param = request.query_params
+        loan_id = input_param.get('loan_id')
+        print(loan_id)
+        queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
+                                                                     total_loan_budget= Sum('loan_budget'),
+                                                                     total_acquisition_loan= Sum('acquisition_loan'),
+                                                                     total_building_loan= Sum('building_loan'),
+                                                                     total_mezzanine_loan= Sum('mezzanine_loan'))
+        return Response(queryset)
