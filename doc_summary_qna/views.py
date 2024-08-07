@@ -26,7 +26,7 @@ class ResponseView(APIView):
             if predefined_question:
                 user_question = predefined_prompts()
             response = user_input(user_question)
-            return Response({"response":response["output_text"]},status=200)
+            return Response({"response":response},status=200)
         except Exception as e:
             return Response({"error":str(e)},status=500)
         
