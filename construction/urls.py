@@ -9,5 +9,6 @@ urlpatterns = [
     path("disbursement-status-mapping/",ReturnDisbursementStatusMapping.as_view(),name="disbursement-status-mapping"),
     path("dashboard-graph/",DashboardGraph.as_view(),name="dashboard-graph"),
     path("budget-master/",Budget.as_view(),name='budget-master'),
-    path('budget-master/<int:id>/', Budget.as_view(), name='update-budget-master')
+    path('budget-master/<int:id>/', Budget.as_view(), name='update-budget-master'),
+    path("budget-summary/", BudgetSummary.as_view(),name='budget-summary')
 ]

@@ -138,7 +138,8 @@ class BudgetMaster(models.Model):
     total_funded = models.IntegerField(null= True,blank=True)
     remaining_to_fund = models.IntegerField(null= True,blank=True)
     total_funded_percentage = models.IntegerField(null= True,blank=True)
-    uses = models.CharField(max_length=50)
+    uses = models.CharField(max_length=150)
+    uses_type = models.CharField(null=True,blank=True)
 
     def __str__(self):
         return self.id
