@@ -157,7 +157,7 @@ class DashboardGraph(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        input_json = request.data
+        input_json = request.query_params
         loan_id = input_json.get('loan_id')
         graph_name = input_json.get('graph_name')
 
