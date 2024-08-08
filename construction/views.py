@@ -242,5 +242,5 @@ class BudgetSummary(APIView):
                                                                      total_loan_budget= Sum('loan_budget'),
                                                                      total_acquisition_loan= Sum('acquisition_loan'),
                                                                      total_building_loan= Sum('building_loan'),
-                                                                     total_mezzanine_loan= Sum('mezzanine_loan'))
+                                                                     total_mezzanine_loan= Sum('mezzanine_loan')).order_by('uses_type')
         return Response(queryset)

@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "construction",
     "corsheaders",
     "doc_summary_qna",
+    "document_management"
 ]
 
 MIDDLEWARE = [
@@ -115,6 +116,11 @@ DATABASES = {
     }
 }
 
+MONGODB = {
+    'NAME': 'Gremadex',
+    'HOST': 'localhost',
+    'PORT': 27017,
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
