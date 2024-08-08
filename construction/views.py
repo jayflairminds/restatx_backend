@@ -24,11 +24,11 @@ class LoanListView(generics.ListAPIView):
         profile = UserProfile.objects.get(user=user)
         match profile.role_type:
             case "lender":
-                loans = Loan.objects.filter(lender_id=user)
+                loans = Loan.objects.filter(lender_id=user).order_by('loanid')
             case "inspector":
-                loans = Loan.objects.filter(inspector_id=user)
+                loans = Loan.objects.filter(inspector_id=user).order_by('loanid')
             case "borrower":
-                loans = Loan.objects.filter(borrower_id=user)
+                loans = Loan.objects.filter(borrower_id=user).order_by('loanid')
 
         loans = loans.select_related("project","lender", "borrower","inspector")
         return loans
