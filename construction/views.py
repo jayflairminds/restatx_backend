@@ -24,11 +24,11 @@ class LoanListView(generics.ListAPIView):
         profile = UserProfile.objects.get(user=user)
         match profile.role_type:
             case "lender":
-                loans = Loan.objects.filter(lender_id=user)
+                loans = Loan.objects.filter(lender_id=user).order_by('loanid')
             case "inspector":
-                loans = Loan.objects.filter(inspector_id=user)
+                loans = Loan.objects.filter(inspector_id=user).order_by('loanid')
             case "borrower":
-                loans = Loan.objects.filter(borrower_id=user)
+                loans = Loan.objects.filter(borrower_id=user).order_by('loanid')
 
         loans = loans.select_related("project","lender", "borrower","inspector")
         return loans
@@ -209,17 +209,23 @@ class Budget(APIView):
             uses_type = input_param.get('uses_type')
             queryset = BudgetMaster.objects.filter(loan_id=loan_id,uses_type = uses_type).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
             output_lis = list()
+            acquisition_total = 0
+            project_total = 0
+
             for out in queryset:
-                output_dict = dict()
-                output_dict["id"] = out[0]
-                output_dict['loan_id'] = out[1]
-                output_dict['project_total'] = out[2]
-                output_dict['loan_budget'] = out[3]
-                output_dict['acquisition_loan'] = out[4]
-                output_dict['building_loan'] = out[5]
-                output_dict['project_loan'] = out[6]
-                output_dict['mezzanine_loan'] = out[7]
-                output_dict['uses'] = out[8]
+                output_dict = {
+                    "id": out[0],
+                    "loan_id": out[1],
+                    "project_total": out[2],
+                    "loan_budget": out[3],
+                    "acquisition_loan": out[4],
+                    "building_loan": out[5],
+                    "project_loan": out[6],
+                    "mezzanine_loan": out[7],
+                    "uses": out[8]
+                }
+                acquisition_total += out[4]
+                project_total += out[6]
                 output_lis.append(output_dict)
             return Response(output_lis,status=status.HTTP_200_OK)
         except:
