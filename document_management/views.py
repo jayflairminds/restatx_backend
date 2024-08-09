@@ -52,11 +52,13 @@ class DocumentManagement(APIView):
         except Exception as e:
             return HttpResponse(f"Error: {str(e)}", status=500)
         
-    def delete(self,request,file_id):
-        queryset = Document.objects.filter(id = id)
-        DocumentSerializer(queryset,Many=True)
-
-        pass
+    def delete(self,request,id):
+        document = Document.objects.get(pk=id)
+        Document.objects.filter(id = id).delete()
+        file_id = document.file_id
+        file_id = ObjectId(file_id)
+        fs.delete(file_id)
+        return Response({'message': 'File Deleted'},status=status.HTTP_204_NO_CONTENT)
         
 class ListOfDocument(APIView):
     permission_classes = [IsAuthenticated]
