@@ -6,5 +6,6 @@ class Document(models.Model):
     loan = models.ForeignKey(Loan, on_delete= models.CASCADE)
     document_name = models.CharField(max_length=255)
     document_type = models.CharField(max_length=150)
-    file_id = models.CharField(max_length=255)
+    document_comment = models.CharField(max_length=300,null=True)
+    file_id = models.CharField(max_length=255,null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
