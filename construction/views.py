@@ -244,3 +244,50 @@ class BudgetSummary(APIView):
                                                                      total_building_loan= Sum('building_loan'),
                                                                      total_mezzanine_loan= Sum('mezzanine_loan')).order_by('uses_type')
         return Response(queryset)
+
+class ProjectCreateUpdateDelete(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        serializer = ProjectSerializer(request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        input_params = request.query_params
+        id = input_params.get('id')
+        
+        if id:
+            try:
+                project = Project.objects.get(pk=id)
+                project_serializer = ProjectSerializer(project)
+                return Response(project_serializer.data, status=status.HTTP_200_OK)
+            except Project.DoesNotExist:
+                return Response({"detail": "Project not found."}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({"detail": "ID parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    def put(self, request,id):
+        try:
+            budget = Project.objects.get(pk=id)
+        except Project.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = ProjectSerializer(budget, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ProjectList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProjectSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        id = user.id
+        project = Project.objects.filter(user = id).order_by('id')
+        return project

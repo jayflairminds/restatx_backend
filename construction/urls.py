@@ -10,5 +10,8 @@ urlpatterns = [
     path("dashboard-graph/",DashboardGraph.as_view(),name="dashboard-graph"),
     path("budget-master/",Budget.as_view(),name='budget-master'),
     path('budget-master/<int:id>/', Budget.as_view(), name='update-budget-master'),
-    path("budget-summary/", BudgetSummary.as_view(),name='budget-summary')
+    path("budget-summary/", BudgetSummary.as_view(),name='budget-summary'),
+    path("project-list/", ProjectList.as_view(),name='project-list'),
+    path("project/", ProjectCreateUpdateDelete.as_view(),name='project'),
+    path("project/<int:id>", ProjectCreateUpdateDelete.as_view(),name='update-project')
 ]

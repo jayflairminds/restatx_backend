@@ -69,7 +69,7 @@ class DocumentManagement(APIView):
         except Exception as e:
             return HttpResponse(f"Error: {str(e)}", status=500)
         
-    def put(self,request,id):
+    def delete(self,request,id):
         document = Document.objects.get(pk=id)
         Document.objects.filter(id = id).delete()
         file_id = document.file_id

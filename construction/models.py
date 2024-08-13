@@ -17,7 +17,7 @@ class Project(models.Model):
     startdate = models.DateTimeField(null=True, blank=True)
     enddate = models.DateTimeField(null=True, blank=True)
     project_type = models.CharField(max_length=50, choices=PROJECT_TYPE_CHOICES)
-
+    user = models.ForeignKey(User, on_delete=models.CASCADE,null=True)
     def __str__(self):
         return self.projectname
 
