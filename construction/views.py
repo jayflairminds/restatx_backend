@@ -249,9 +249,10 @@ class ProjectCreateUpdateDelete(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
-        serializer = ProjectSerializer(request.data)
+        serializer = ProjectSerializer(data = request.data)
+        user_id = self.request.user.id
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(user_id = user_id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
