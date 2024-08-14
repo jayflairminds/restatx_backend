@@ -4,9 +4,9 @@ from users.models import User
 PROJECT_TYPE_CHOICES = [("residential", "Residential"), ("commercial", "Commercial")]
 
 LOAN_STATUS = [
-    ("pending", "Pending"),
-    ("approved", "Approved"),
-    ("closed", "Closed"),
+    ("Pending", "pending"),
+    ("Approved", "approved"),
+    ("Closed", "closed"),
 ]
 
 

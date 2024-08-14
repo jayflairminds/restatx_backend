@@ -305,7 +305,14 @@ class CreateRetrieveUpdateLoan(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
-        serializer = LoanSerializer(data = request.data)
+        input_json = request.data
+        project_id = request.data.get('project')        
+        project_type = Project.objects.get(pk=project_id).project_type
+        input_json['loantype'] = project_type
+        input_json['status'] = 'Pending'
+        input_json['borrower'] = self.request.user.id
+        serializer = LoanSerializer(data = input_json)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
