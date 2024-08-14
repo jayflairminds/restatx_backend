@@ -352,3 +352,22 @@ class CreateRetrieveUpdateLoan(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Loan.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        
+class UsesListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        try:
+            input_params = request.query_params
+            loan_id = input_params.get('loan_id')
+            project_id = Loan.objects.get(pk=loan_id).project_id
+            print("project id :: ",project_id)
+            project_type = Project.objects.get(pk=project_id).project_type
+            with open(r'construction\uses_mapping.json','r') as file:
+                uses_dictionary = json.load(file)
+                response = uses_dictionary.get(project_type)
+            return Response(response)
+        except Loan.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
+        except Project.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
