@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from knox.auth import AuthToken
-from .serializers import RegisterSerializer
+from .serializers import *
 from users.models import UserProfile
+from rest_framework import generics
+
 
 
 def serialize_user(user):
@@ -56,3 +58,15 @@ class GetUserView(APIView):
             )
         except UserProfile.DoesNotExist:
             return Response({"Output": "User profile not found"}, status=400)
+
+class UserList(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        input_params = self.request.query_params
+        print(input_params)
+        role_type = input_params.get('role_type')
+        users = UserProfile.objects.filter(role_type = role_type ).order_by('id')
+
+        return users

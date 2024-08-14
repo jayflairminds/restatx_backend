@@ -43,3 +43,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             user=user, role_type=validated_data["role_type"].lower()
         )
         return user
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.username", read_only=True)
+
+    class Meta:
+        model = UserProfile
+        fields = "__all__"
