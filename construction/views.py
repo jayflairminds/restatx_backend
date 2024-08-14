@@ -282,6 +282,14 @@ class ProjectCreateUpdateDelete(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id):
+        try:
+            document = Project.objects.get(pk=id)
+            Project.objects.filter(id=id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Project.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 class ProjectList(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -298,9 +306,8 @@ class CreateRetrieveUpdateLoan(APIView):
 
     def post(self,request):
         serializer = LoanSerializer(data = request.data)
-        user_id = self.request.user.id
         if serializer.is_valid():
-            serializer.save(user_id = user_id)
+            serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
