@@ -11,6 +11,7 @@ from .models import Loan
 from .serializers import *
 import datetime
 import json
+import os
 from django.db.models import Max,Sum
 
 
@@ -384,7 +385,10 @@ class UsesListView(APIView):
             loan_id = input_params.get('loan_id')
             project_id = Loan.objects.get(pk=loan_id).project_id
             project_type = Project.objects.get(pk=project_id).project_type
-            with open(r'construction\uses_mapping.json','r') as file:
+            BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            file_path = os.path.join(BASE_DIR, 'construction', 'uses_mapping.json')
+
+            with open(file_path,'r') as file:
                 uses_dictionary = json.load(file)
                 response = uses_dictionary.get(project_type)
             return Response(response)
