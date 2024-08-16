@@ -210,7 +210,7 @@ class Budget(APIView):
             output_lis = list()
             acquisition_total = 0
             project_total = 0
-
+            print(queryset)
             for out in queryset:
                 output_dict = {
                     "id": out[0],
@@ -223,8 +223,8 @@ class Budget(APIView):
                     "mezzanine_loan": out[7],
                     "uses": out[8]
                 }
-                acquisition_total += out[4]
-                project_total += out[6]
+                # acquisition_total += out[4]
+                # project_total += out[6]
                 output_lis.append(output_dict)
             return Response(output_lis,status=status.HTTP_200_OK)
         except:
@@ -388,7 +388,13 @@ class InsertUsesforBudgetMaster(APIView):
                     BudgetMaster(
                         uses=sub_uses,
                         uses_type=uses,
-                        loan=loan
+                        loan=loan,
+                        project_total = 0,
+                        loan_budget = 0,
+                        acquisition_loan = 0,
+                        building_loan=0,
+                        project_loan = 0,
+                        mezzanine_loan = 0
                     )
                 )
 
