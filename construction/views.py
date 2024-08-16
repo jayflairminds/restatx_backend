@@ -208,9 +208,13 @@ class Budget(APIView):
             uses_type = input_param.get('uses_type')
             queryset = BudgetMaster.objects.filter(loan_id=loan_id,uses_type = uses_type).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
             output_lis = list()
-            acquisition_total = 0
             project_total = 0
-            print(queryset)
+            loan_budget = 0
+            acquisition_total = 0
+            building_loan = 0
+            project_loan = 0
+            mezzanine_loan = 0
+
             for out in queryset:
                 output_dict = {
                     "id": out[0],
@@ -223,9 +227,26 @@ class Budget(APIView):
                     "mezzanine_loan": out[7],
                     "uses": out[8]
                 }
-                # acquisition_total += out[4]
-                # project_total += out[6]
+                project_total += out[2]
+                loan_budget += out[3]
+                acquisition_total += out[4]
+                building_loan += out[5]
+                project_loan += out[6]
+                mezzanine_loan += out[7]
+                loan_id = out[1]
                 output_lis.append(output_dict)
+            
+            total_of_table = {
+                "uses" : "Total",
+                "loan_id": loan_id,
+                "project_total": project_total,
+                "loan_budget": loan_budget,
+                "acquisition_loan": acquisition_total,
+                "building_loan": building_loan,
+                "project_loan": project_loan,
+                "mezzanine_loan": mezzanine_loan,
+                }
+            output_lis.append(total_of_table)
             return Response(output_lis,status=status.HTTP_200_OK)
         except:
             return Response(status=status.HTTP_400_BAD_REQUEST)      
