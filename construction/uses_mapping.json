@@ -1,6 +1,6 @@
 {
     "residential":{
-        "Acquisition Costs": ["Purchase Price", 
+        "Acquisition cost": ["Purchase Price", 
                                 "Acquisition Closing Costs",
                                 "Oct 2014 Additional Loan Proceeds Closing Costs", 
                                 "Property & Liability Insurance Paid at Acquisition Closing", 
@@ -8,7 +8,7 @@
                                 "Property Taxes (2H 2015)", 
                                 "Pre-Development Interest Paid to Date", 
                                 "Extension Fees Paid to Date"],
-        "Hard Costs": ["Div 1 Gen'l Requirements", 
+        "Hard cost": ["Div 1 Gen'l Requirements", 
                         "Hoist", 
                         "Scaffolding", 
                         "Hoist--Pre Dev" ,
@@ -19,7 +19,7 @@
                         "Inter. Demo" ,
                         "Façade Demo", 
                         "Asbestos"],
-        "Soft Costs":["Arch of Record",
+        "Soft cost":["Arch of Record",
                         "Specifications", 
                         "Landscape Architect", 
                         "Lighting Design", 
@@ -29,16 +29,20 @@
                         "Geotech Invest.",  
                         "Civil Engrng/Parking", 
                         "Site Planning",
-                        "Acoustical"],
-        "Operating & Debt Shortfalls":["Real Estate Taxes", 
-                                        "Ground Rent", 
-                                        "Operating Expenses / Common Charges", 
-                                        "Senior Loan Interest", 
-                                        "Mezzanine Loan Interest" ]
+                        "Acoustical"]
 
     },
     "commercial":{
-        "Hard Costs": ["Div 1 Gen'l Requirements", 
+        "Acquisition cost": ["Purchase Price", 
+        "Acquisition Closing Costs",
+        "Oct 2014 Additional Loan Proceeds Closing Costs", 
+        "Property & Liability Insurance Paid at Acquisition Closing", 
+        "Property Taxes Paid through 6/30/15",
+        "Property Taxes (2H 2015)", 
+        "Pre-Development Interest Paid to Date", 
+        "Extension Fees Paid to Date"],
+        
+        "Hard cost": ["Div 1 Gen'l Requirements", 
                         "Hoist", 
                         "Scaffolding", 
                         "Hoist--Pre Dev" ,
@@ -49,7 +53,7 @@
                         "Inter. Demo" ,
                         "Façade Demo", 
                         "Asbestos"],
-        "Soft Costs":["Arch of Record",
+        "Soft cost":["Arch of Record",
                         "Specifications", 
                         "Landscape Architect", 
                         "Lighting Design", 
@@ -59,22 +63,6 @@
                         "Geotech Invest.",  
                         "Civil Engrng/Parking", 
                         "Site Planning",
-                        "Acoustical"],
-        "Operating & Debt Shortfalls":["Real Estate Taxes", 
-                                        "Ground Rent", 
-                                        "Operating Expenses / Common Charges", 
-                                        "Senior Loan Interest", 
-                                        "Mezzanine Loan Interest" ],
-        "Closing & Financing Costs":["Mortgage Recording Taxes", 
-                                        "Sr. Loan Fee", 
-                                        "Mezz Loan Fee", 
-                                        "Loan Broker Fee", 
-                                        "Rate Cap Cost & Fee", 
-                                        "Title", 
-                                        "Borrower Legal", 
-                                        "Sr. Lender Legal", 
-                                        "Mezz Lender Legal", 
-                                        "3rd Party Due Diligence Costs", 
-                                        "Sr. Loan Stub Interest"]
+                        "Acoustical"]
     }
 }

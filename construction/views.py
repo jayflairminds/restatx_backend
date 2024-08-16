@@ -138,7 +138,6 @@ class ReturnDisbursementStatusMapping(APIView):
         user = request.user
         profile = UserProfile.objects.get(user=user)
         role_type = profile.role_type
-        print(role_type)
         with open(r'construction\disbursement_status_mapping.json','r') as file:
             status_dictionary = json.load(file)
         status_dictionary
@@ -202,42 +201,64 @@ class Budget(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    def get(self,request,*args, **kwargs):
-        try :
-            input_param = request.query_params
-            loan_id = int(input_param.get('loan_id'))
-            uses_type = input_param.get('uses_type')
-            queryset = BudgetMaster.objects.filter(loan_id=loan_id,uses_type = uses_type).values_list('id','loan_id','project_total','loan_budget','acquisition_loan','building_loan','project_loan','mezzanine_loan','uses')
-            output_lis = list()
-            acquisition_total = 0
-            project_total = 0
-
-            for out in queryset:
-                output_dict = {
-                    "id": out[0],
-                    "loan_id": out[1],
-                    "project_total": out[2],
-                    "loan_budget": out[3],
-                    "acquisition_loan": out[4],
-                    "building_loan": out[5],
-                    "project_loan": out[6],
-                    "mezzanine_loan": out[7],
-                    "uses": out[8]
+    def get(self, request, *args, **kwargs):
+            try:
+                # Extract query parameters
+                input_param = request.query_params
+                loan_id = int(input_param.get('loan_id'))
+                uses_type = input_param.get('uses_type')
+                
+                # Query and calculate totals at the database level
+                queryset = BudgetMaster.objects.filter(
+                    loan_id=loan_id,
+                    uses_type=uses_type
+                ).values(
+                    'id', 'loan_id', 'project_total', 'loan_budget',
+                    'acquisition_loan', 'building_loan', 'project_loan',
+                    'mezzanine_loan', 'uses'
+                )
+                
+                totals = BudgetMaster.objects.filter(
+                    loan_id=loan_id,
+                    uses_type=uses_type
+                ).aggregate(
+                    project_total_sum=Sum('project_total'),
+                    loan_budget_sum=Sum('loan_budget'),
+                    acquisition_loan_sum=Sum('acquisition_loan'),
+                    building_loan_sum=Sum('building_loan'),
+                    project_loan_sum=Sum('project_loan'),
+                    mezzanine_loan_sum=Sum('mezzanine_loan')
+                )
+                
+                output_list = list(queryset)
+                
+                total_of_table = {
+                    "uses": "Total",
+                    "loan_id": loan_id,
+                    "project_total": totals['project_total_sum'] or 0,
+                    "loan_budget": totals['loan_budget_sum'] or 0,
+                    "acquisition_loan": totals['acquisition_loan_sum'] or 0,
+                    "building_loan": totals['building_loan_sum'] or 0,
+                    "project_loan": totals['project_loan_sum'] or 0,
+                    "mezzanine_loan": totals['mezzanine_loan_sum'] or 0,
                 }
-                acquisition_total += out[4]
-                project_total += out[6]
-                output_lis.append(output_dict)
-            return Response(output_lis,status=status.HTTP_200_OK)
-        except:
-            return Response(status=status.HTTP_400_BAD_REQUEST)      
-        
+                output_list.append(total_of_table)
+                
+                return Response(output_list, status=status.HTTP_200_OK)
+            
+            except ValueError as e:
+                return Response({"error": "Invalid loan_id"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            except Exception as e:
+                # Catch all other unexpected errors
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)     
+            
 class BudgetSummary(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
         input_param = request.query_params
         loan_id = input_param.get('loan_id')
-        print(loan_id)
         queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
                                                                      total_loan_budget= Sum('loan_budget'),
                                                                      total_acquisition_loan= Sum('acquisition_loan'),
@@ -349,6 +370,7 @@ class CreateRetrieveUpdateLoan(APIView):
         try:
             Loan.objects.get(pk=loanid)
             Loan.objects.filter(loanid=loanid).delete()
+            BudgetMaster.objects.filter(loan_id= loanid).delete() 
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Loan.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -361,7 +383,6 @@ class UsesListView(APIView):
             input_params = request.query_params
             loan_id = input_params.get('loan_id')
             project_id = Loan.objects.get(pk=loan_id).project_id
-            print("project id :: ",project_id)
             project_type = Project.objects.get(pk=project_id).project_type
             with open(r'construction\uses_mapping.json','r') as file:
                 uses_dictionary = json.load(file)
@@ -371,3 +392,35 @@ class UsesListView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND) 
         except Project.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND) 
+        
+class InsertUsesforBudgetMaster(APIView):
+    
+    def post(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        try:
+            loan = Loan.objects.get(loanid=loan_id)
+        except Loan.DoesNotExist:
+            return Response({"error": "Loan with provided loan_id does not exist"}, status=400)
+        budget_master_instances = []
+
+        for i, j in input_json.get('Uses').items():
+            uses = "_".join(i.split(" ")).lower()  
+            for sub_uses in j:
+                budget_master_instances.append(
+                    BudgetMaster(
+                        uses=sub_uses,
+                        uses_type=uses,
+                        loan=loan,
+                        project_total = 0,
+                        loan_budget = 0,
+                        acquisition_loan = 0,
+                        building_loan=0,
+                        project_loan = 0,
+                        mezzanine_loan = 0
+                    )
+                )
+
+        BudgetMaster.objects.bulk_create(budget_master_instances)
+
+        return Response({"Response": "Data Inserted"}, status=201)
