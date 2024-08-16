@@ -16,5 +16,6 @@ urlpatterns = [
     path("project/<int:id>", ProjectCreateUpdateDelete.as_view(),name='update-delete-project'),
     path("loan/", CreateRetrieveUpdateLoan.as_view(),name='loan'),
     path("loan/<int:loanid>",CreateRetrieveUpdateLoan.as_view(),name='delete-loan'),
-    path("uses-list/",UsesListView.as_view(), name = 'uses-list')
+    path("uses-list/",UsesListView.as_view(), name = 'uses-list'),
+    path("insert-uses/",InsertUsesforBudgetMaster.as_view(), name='insert-uses')
 ]

@@ -138,7 +138,6 @@ class ReturnDisbursementStatusMapping(APIView):
         user = request.user
         profile = UserProfile.objects.get(user=user)
         role_type = profile.role_type
-        print(role_type)
         with open(r'construction\disbursement_status_mapping.json','r') as file:
             status_dictionary = json.load(file)
         status_dictionary
@@ -237,7 +236,6 @@ class BudgetSummary(APIView):
     def get(self,request):
         input_param = request.query_params
         loan_id = input_param.get('loan_id')
-        print(loan_id)
         queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
                                                                      total_loan_budget= Sum('loan_budget'),
                                                                      total_acquisition_loan= Sum('acquisition_loan'),
@@ -349,6 +347,7 @@ class CreateRetrieveUpdateLoan(APIView):
         try:
             Loan.objects.get(pk=loanid)
             Loan.objects.filter(loanid=loanid).delete()
+            BudgetMaster.objects.filter(loan_id= loanid).delete() 
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Loan.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
@@ -361,7 +360,6 @@ class UsesListView(APIView):
             input_params = request.query_params
             loan_id = input_params.get('loan_id')
             project_id = Loan.objects.get(pk=loan_id).project_id
-            print("project id :: ",project_id)
             project_type = Project.objects.get(pk=project_id).project_type
             with open(r'construction\uses_mapping.json','r') as file:
                 uses_dictionary = json.load(file)
@@ -371,3 +369,29 @@ class UsesListView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND) 
         except Project.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND) 
+        
+class InsertUsesforBudgetMaster(APIView):
+    
+    def post(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        try:
+            loan = Loan.objects.get(loanid=loan_id)
+        except Loan.DoesNotExist:
+            return Response({"error": "Loan with provided loan_id does not exist"}, status=400)
+        budget_master_instances = []
+
+        for i, j in input_json.get('Uses').items():
+            uses = "_".join(i.split(" ")).lower()  
+            for sub_uses in j:
+                budget_master_instances.append(
+                    BudgetMaster(
+                        uses=sub_uses,
+                        uses_type=uses,
+                        loan=loan
+                    )
+                )
+
+        BudgetMaster.objects.bulk_create(budget_master_instances)
+
+        return Response({"Response": "Data Inserted"}, status=201)
