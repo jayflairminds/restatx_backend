@@ -269,14 +269,35 @@ class BudgetSummary(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
-        input_param = request.query_params
-        loan_id = input_param.get('loan_id')
-        queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
-                                                                     total_loan_budget= Sum('loan_budget'),
-                                                                     total_acquisition_loan= Sum('acquisition_loan'),
-                                                                     total_building_loan= Sum('building_loan'),
-                                                                     total_mezzanine_loan= Sum('mezzanine_loan')).order_by('uses_type')
-        return Response(queryset)
+        try: 
+            input_param = request.query_params
+            loan_id = input_param.get('loan_id')
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
+                                                                        total_loan_budget= Sum('loan_budget'),
+                                                                        total_acquisition_loan= Sum('acquisition_loan'),
+                                                                        total_building_loan= Sum('building_loan'),
+                                                                        total_mezzanine_loan= Sum('mezzanine_loan'),
+                                                                        total_project_loan = Sum('project_loan')).order_by('uses_type')
+            
+            totals = queryset.aggregate(
+                        project_total_sum=Sum('total_project_total'),
+                        loan_budget_sum=Sum('total_loan_budget'),
+                        acquisition_loan_sum=Sum('total_acquisition_loan'),
+                        building_loan_sum=Sum('total_building_loan'),
+                        mezzanine_loan_sum=Sum('total_mezzanine_loan'))
+            total_output = {
+                "uses_type" : 'Total',
+                "total_project_total" : totals['project_total_sum'] or 0,
+                "total_loan_budget" : totals['loan_budget_sum'] or 0,
+                "total_acquisition_loan" : totals['acquisition_loan_sum'] or 0,
+                "total_building_loan" : totals['building_loan_sum'] or 0,
+                "mezzanine_loan_sum" : totals['mezzanine_loan_sum'] or 0,
+           }
+            result = list(queryset)
+            result.append(total_output)
+            return Response(result,status=status.HTTP_200_OK)
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 class ProjectCreateUpdateDelete(APIView):
     permission_classes = [IsAuthenticated]
