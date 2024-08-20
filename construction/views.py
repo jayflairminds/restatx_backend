@@ -217,7 +217,8 @@ class Budget(APIView):
                     'id', 'loan_id', 'project_total', 'loan_budget',
                     'acquisition_loan', 'building_loan', 'project_loan',
                     'mezzanine_loan', 'uses'
-                )
+                ).order_by('uses')
+                
                 
                 totals = BudgetMaster.objects.filter(
                     loan_id=loan_id,

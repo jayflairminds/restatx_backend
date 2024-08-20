@@ -23,7 +23,7 @@ from io import BytesIO
 import base64
 
 
-client = MongoClient(settings.MONGODB['URI'])
+client = MongoClient(settings.MONGODB['URI'],ssl=True)
 db = client[settings.MONGODB['DATABASE_NAME']]
 fs = gridfs.GridFS(db)
 
