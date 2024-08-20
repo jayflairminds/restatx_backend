@@ -255,14 +255,15 @@ class Budget(APIView):
                 return Response({"error": "Invalid loan_id"}, status=status.HTTP_400_BAD_REQUEST)
             
             except Exception as e:
-                # Catch all other unexpected errors
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)     
     
-    def delete(self,request):
-        input_param = request.data        
-        serializers = BudgetMasterSerializer()
-        serializers.delete(id)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def delete(self,request,id):       
+        try:
+            BudgetMaster.objects.get(id=id) 
+            BudgetMaster.objects.filter(id=id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
             
 class BudgetSummary(APIView):
     permission_classes = [IsAuthenticated]
