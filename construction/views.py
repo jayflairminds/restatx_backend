@@ -460,3 +460,21 @@ class InsertUsesforBudgetMaster(APIView):
         BudgetMaster.objects.bulk_create(budget_master_instances)
 
         return Response({"Response": "Data Inserted"}, status=201)
+
+
+class ListUsesType(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        try:
+            input_params = request.query_params
+            loan_id = input_params.get('loan_id')
+            Loan.objects.get(pk=loan_id)
+            query_set = BudgetMaster.objects.filter(loan_id = loan_id).order_by('uses_type').values_list('uses_type',flat=True).distinct()
+            return Response({
+                "uses_type":query_set
+                },status=status.HTTP_200_OK)
+        except Loan.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
