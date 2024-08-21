@@ -9,3 +9,4 @@ class Document(models.Model):
     document_comment = models.CharField(max_length=300,null=True)
     file_id = models.CharField(max_length=255,null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=100,null=True,default='Not Started')

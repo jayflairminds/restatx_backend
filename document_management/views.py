@@ -46,12 +46,13 @@ class DocumentManagement(APIView):
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
+                existing_instance.status = 'Pending'
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
-                # Create a new instance
-                serializer.save(file_id=str(file_id))
+                
+                serializer.save(file_id=str(file_id),status='Pending')
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
