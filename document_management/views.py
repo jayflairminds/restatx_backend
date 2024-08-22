@@ -21,7 +21,8 @@ from bson import ObjectId
 from django.http import FileResponse
 from io import BytesIO
 import base64
-
+from doc_summary_qna.doc_processing import *
+from doc_summary_qna.prompts import *
 
 client = MongoClient(settings.MONGODB['URI'],ssl=True)
 db = client[settings.MONGODB['DATABASE_NAME']]
@@ -90,3 +91,21 @@ class ListOfDocument(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response(f"Error: {str(e)}",status=500)
+        
+class DocSummaryView(APIView):
+    def post(self,request):
+        try:
+            file_id = request.data.get("file_id")
+            file_id = ObjectId(file_id)
+            file = fs.get(file_id)
+            # text extraction
+            text = get_pdf_text(file) 
+            # creating text chunks
+            chunks = get_text_chunks(text)
+            # creating vector store and storing it 
+            get_vector_store(chunks)
+            user_question = predefined_prompts()
+            response = user_input(user_question)
+            return Response({"response":response})
+        except Exception as e:
+            return Response({"Error":str(e)},status=500)
