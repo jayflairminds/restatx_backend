@@ -93,6 +93,8 @@ class ListOfDocument(APIView):
             return Response(f"Error: {str(e)}",status=500)
         
 class DocSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
     def post(self,request):
         try:
             file_id = request.data.get("file_id")
