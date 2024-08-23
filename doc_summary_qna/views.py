@@ -10,7 +10,7 @@ class UploadView(APIView):
     def post(self, request):
         try:
             uploaded_file = request.FILES.get('uploaded_file')
-            print("uploaded_file",uploaded_file)
+            print("uploaded_file",type(uploaded_file))
             text = get_pdf_text(uploaded_file) 
             chunks = get_text_chunks(text)
             get_vector_store(chunks)
@@ -26,10 +26,12 @@ class ResponseView(APIView):
             if predefined_question:
                 user_question = predefined_prompts()
             response = user_input(user_question)
-            return Response({"response":response["output_text"]},status=200)
+            return Response({"response":response},status=200)
         except Exception as e:
             return Response({"error":str(e)},status=500)
-        
+
+
+  
         
 
 

@@ -21,9 +21,10 @@ from bson import ObjectId
 from django.http import FileResponse
 from io import BytesIO
 import base64
+from doc_summary_qna.doc_processing import *
+from doc_summary_qna.prompts import *
 
-
-client = MongoClient(settings.MONGODB['URI'])
+client = MongoClient(settings.MONGODB['URI'],ssl=True)
 db = client[settings.MONGODB['DATABASE_NAME']]
 fs = gridfs.GridFS(db)
 
@@ -46,12 +47,13 @@ class DocumentManagement(APIView):
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
+                existing_instance.status = 'Pending'
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
-                # Create a new instance
-                serializer.save(file_id=str(file_id))
+                
+                serializer.save(file_id=str(file_id),status='Pending')
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -89,3 +91,23 @@ class ListOfDocument(APIView):
             return Response(serializer.data)
         except Exception as e:
             return Response(f"Error: {str(e)}",status=500)
+        
+class DocSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self,request):
+        try:
+            file_id = request.data.get("file_id")
+            file_id = ObjectId(file_id)
+            file = fs.get(file_id)
+            # text extraction
+            text = get_pdf_text(file) 
+            # creating text chunks
+            chunks = get_text_chunks(text)
+            # creating vector store and storing it 
+            get_vector_store(chunks)
+            user_question = predefined_prompts()
+            response = user_input(user_question)
+            return Response({"response":response})
+        except Exception as e:
+            return Response({"Error":str(e)},status=500)

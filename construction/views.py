@@ -184,6 +184,9 @@ class Budget(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
+        data = request.data
+        print(data)
+        data['loan'] = data['loan_id'] 
         serializer = BudgetMasterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -217,7 +220,8 @@ class Budget(APIView):
                     'id', 'loan_id', 'project_total', 'loan_budget',
                     'acquisition_loan', 'building_loan', 'project_loan',
                     'mezzanine_loan', 'uses'
-                )
+                ).order_by('uses')
+                
                 
                 totals = BudgetMaster.objects.filter(
                     loan_id=loan_id,
@@ -251,21 +255,49 @@ class Budget(APIView):
                 return Response({"error": "Invalid loan_id"}, status=status.HTTP_400_BAD_REQUEST)
             
             except Exception as e:
-                # Catch all other unexpected errors
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)     
+    
+    def delete(self,request,id):       
+        try:
+            BudgetMaster.objects.get(id=id) 
+            BudgetMaster.objects.filter(id=id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
             
 class BudgetSummary(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
-        input_param = request.query_params
-        loan_id = input_param.get('loan_id')
-        queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
-                                                                     total_loan_budget= Sum('loan_budget'),
-                                                                     total_acquisition_loan= Sum('acquisition_loan'),
-                                                                     total_building_loan= Sum('building_loan'),
-                                                                     total_mezzanine_loan= Sum('mezzanine_loan')).order_by('uses_type')
-        return Response(queryset)
+        try: 
+            input_param = request.query_params
+            loan_id = input_param.get('loan_id')
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
+                                                                        total_loan_budget= Sum('loan_budget'),
+                                                                        total_acquisition_loan= Sum('acquisition_loan'),
+                                                                        total_building_loan= Sum('building_loan'),
+                                                                        total_mezzanine_loan= Sum('mezzanine_loan'),
+                                                                        total_project_loan = Sum('project_loan')).order_by('uses_type')
+            
+            totals = queryset.aggregate(
+                        project_total_sum=Sum('total_project_total'),
+                        loan_budget_sum=Sum('total_loan_budget'),
+                        acquisition_loan_sum=Sum('total_acquisition_loan'),
+                        building_loan_sum=Sum('total_building_loan'),
+                        mezzanine_loan_sum=Sum('total_mezzanine_loan'))
+            total_output = {
+                "uses_type" : 'Total',
+                "total_project_total" : totals['project_total_sum'] or 0,
+                "total_loan_budget" : totals['loan_budget_sum'] or 0,
+                "total_acquisition_loan" : totals['acquisition_loan_sum'] or 0,
+                "total_building_loan" : totals['building_loan_sum'] or 0,
+                "mezzanine_loan_sum" : totals['mezzanine_loan_sum'] or 0,
+           }
+            result = list(queryset)
+            result.append(total_output)
+            return Response(result,status=status.HTTP_200_OK)
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
 
 class ProjectCreateUpdateDelete(APIView):
     permission_classes = [IsAuthenticated]
@@ -428,3 +460,21 @@ class InsertUsesforBudgetMaster(APIView):
         BudgetMaster.objects.bulk_create(budget_master_instances)
 
         return Response({"Response": "Data Inserted"}, status=201)
+
+
+class ListUsesType(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        try:
+            input_params = request.query_params
+            loan_id = input_params.get('loan_id')
+            Loan.objects.get(pk=loan_id)
+            query_set = BudgetMaster.objects.filter(loan_id = loan_id).order_by('uses_type').values_list('uses_type',flat=True).distinct()
+            return Response({
+                "uses_type":query_set
+                },status=status.HTTP_200_OK)
+        except Loan.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
+        except BudgetMaster.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND) 
