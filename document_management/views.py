@@ -34,14 +34,20 @@ class DocumentManagement(APIView):
 
     def post(self,request):
         serializer = DocumentSerializer(data=request.data)
-        input_params = request.query_params
-        input_params
+        input_json = request.data
+
         if serializer.is_valid():
             pdf_file = request.FILES['pdf_file']
             file_id = fs.put(pdf_file, filename=pdf_file.name)
             
+            document_detail= DocumentDetail.objects.get(
+                name=input_json['document_name'],
+                type=input_json['document_type']
+            )
+            print(document_detail)
             existing_instance = Document.objects.filter(
-            Q(document_name=request.data['document_name']) & Q(document_type=request.data['document_type']),Q(loan_id=request.data['loan'])).first()
+                Q(document_detail=document_detail) & Q(loan_id=request.data['loan'])
+            ).first()
 
             if existing_instance:
                 existing_file_id = ObjectId(existing_instance.file_id)
@@ -53,7 +59,7 @@ class DocumentManagement(APIView):
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id),status='Pending')
+                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

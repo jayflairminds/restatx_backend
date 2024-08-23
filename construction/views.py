@@ -8,6 +8,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
+from document_management.models import *
 from .serializers import *
 import datetime
 import json
@@ -368,7 +369,15 @@ class CreateRetrieveUpdateLoan(APIView):
         serializer = LoanSerializer(data = input_json)
 
         if serializer.is_valid():
-            serializer.save()
+            loan = serializer.save()
+            document_details = DocumentDetail.objects.all()
+
+            for detail in document_details:
+                Document.objects.create(
+                    loan=loan,
+                    document_detail=detail,
+                    status='Not Uploaded'
+                )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
