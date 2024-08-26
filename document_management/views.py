@@ -41,8 +41,7 @@ class DocumentManagement(APIView):
             file_id = fs.put(pdf_file, filename=pdf_file.name)
             
             document_detail= DocumentDetail.objects.get(
-                name=input_json['document_name'],
-                type=input_json['document_type']
+                id=input_json['document_id']
             )
             print(document_detail)
             existing_instance = Document.objects.filter(
