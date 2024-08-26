@@ -77,12 +77,17 @@ class DocumentManagement(APIView):
         except Exception as e:
             return HttpResponse(f"Error: {str(e)}", status=500)
         
-    def delete(self,request,id):
+    def delete(self, request, id):
         document = Document.objects.get(pk=id)
-        Document.objects.filter(id = id).delete()
+        
         file_id = document.file_id
-        file_id = ObjectId(file_id)
-        fs.delete(file_id)
+        if file_id:
+            file_id = ObjectId(file_id)
+            fs.delete(file_id)
+        
+        document.status = 'Not Uploaded'
+        document.file_id = None
+        document.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
 class ListOfDocument(APIView):
@@ -92,7 +97,7 @@ class ListOfDocument(APIView):
         try:
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = Document.objects.filter(loan_id =loan_id).order_by('-uploaded_at')
+            queryset = Document.objects.filter(loan_id =loan_id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
             serializer = DocumentSerializer(queryset, many=True)
             return Response(serializer.data)
         except Exception as e:
