@@ -41,8 +41,7 @@ class DocumentManagement(APIView):
             file_id = fs.put(pdf_file, filename=pdf_file.name)
             
             document_detail= DocumentDetail.objects.get(
-                name=input_json['document_name'],
-                type=input_json['document_type']
+                id=input_json['document_detail_id']
             )
             print(document_detail)
             existing_instance = Document.objects.filter(
@@ -54,12 +53,13 @@ class DocumentManagement(APIView):
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'Pending'
+                existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail)
+                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail,uploaded_at = datetime.datetime.now())
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -87,6 +87,7 @@ class DocumentManagement(APIView):
         
         document.status = 'Not Uploaded'
         document.file_id = None
+        document.uploaded_at = None
         document.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
         

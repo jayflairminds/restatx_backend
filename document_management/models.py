@@ -15,5 +15,5 @@ class Document(models.Model):
     document_detail = models.ForeignKey(DocumentDetail,on_delete=models.CASCADE,null=True)
     document_comment = models.CharField(max_length=300,null=True)
     file_id = models.CharField(max_length=255,null=True)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_at = models.DateTimeField(null=True)
     status = models.CharField(max_length=100,null=True,default='Not Uploaded')
