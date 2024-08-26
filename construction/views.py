@@ -133,16 +133,17 @@ class UpdateDisbursementStatus(APIView):
             return Response({'error': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
         
 
-class ReturnDisbursementStatusMapping(APIView):
+class ReturnStatusMapping(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self,request):
+        input_params = request.query_params
         user = request.user
         profile = UserProfile.objects.get(user=user)
         role_type = profile.role_type
-        with open(r'construction\disbursement_status_mapping.json','r') as file:
+        with open(r'construction\status_mapping.json','r') as file:
             status_dictionary = json.load(file)
-        status_dictionary
+        status_dictionary = status_dictionary[input_params['application_status']]
         match role_type:
             case 'borrower':
                 output = status_dictionary['borrower']
