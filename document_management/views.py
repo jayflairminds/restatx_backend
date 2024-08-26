@@ -97,7 +97,7 @@ class ListOfDocument(APIView):
         try:
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = Document.objects.filter(loan_id =loan_id).order_by('-uploaded_at')
+            queryset = Document.objects.filter(loan_id =loan_id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
             serializer = DocumentSerializer(queryset, many=True)
             return Response(serializer.data)
         except Exception as e:
