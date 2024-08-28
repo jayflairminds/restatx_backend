@@ -24,8 +24,8 @@ import base64
 from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
 
-client = MongoClient(settings.MONGODB['URI'],ssl=True)
-db = client[settings.MONGODB['DATABASE_NAME']]
+client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
+db = client[settings.MONGODB['NAME']]
 fs = gridfs.GridFS(db)
 
 
@@ -34,26 +34,32 @@ class DocumentManagement(APIView):
 
     def post(self,request):
         serializer = DocumentSerializer(data=request.data)
-        input_params = request.query_params
-        input_params
+        input_json = request.data
+
         if serializer.is_valid():
             pdf_file = request.FILES['pdf_file']
             file_id = fs.put(pdf_file, filename=pdf_file.name)
             
+            document_detail= DocumentDetail.objects.get(
+                id=input_json['document_detail_id']
+            )
+            print(document_detail)
             existing_instance = Document.objects.filter(
-            Q(document_name=request.data['document_name']) & Q(document_type=request.data['document_type']),Q(loan_id=request.data['loan'])).first()
+                Q(document_detail=document_detail) & Q(loan_id=request.data['loan'])
+            ).first()
 
             if existing_instance:
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'Pending'
+                existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id),status='Pending')
+                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail,uploaded_at = datetime.datetime.now())
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -71,12 +77,18 @@ class DocumentManagement(APIView):
         except Exception as e:
             return HttpResponse(f"Error: {str(e)}", status=500)
         
-    def delete(self,request,id):
+    def delete(self, request, id):
         document = Document.objects.get(pk=id)
-        Document.objects.filter(id = id).delete()
+        
         file_id = document.file_id
-        file_id = ObjectId(file_id)
-        fs.delete(file_id)
+        if file_id:
+            file_id = ObjectId(file_id)
+            fs.delete(file_id)
+        
+        document.status = 'Not Uploaded'
+        document.file_id = None
+        document.uploaded_at = None
+        document.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
         
 class ListOfDocument(APIView):
@@ -86,7 +98,7 @@ class ListOfDocument(APIView):
         try:
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = Document.objects.filter(loan_id =loan_id).order_by('-uploaded_at')
+            queryset = Document.objects.filter(loan_id =loan_id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
             serializer = DocumentSerializer(queryset, many=True)
             return Response(serializer.data)
         except Exception as e:

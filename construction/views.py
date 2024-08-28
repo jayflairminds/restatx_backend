@@ -8,6 +8,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
+from document_management.models import *
 from .serializers import *
 import datetime
 import json
@@ -132,16 +133,17 @@ class UpdateDisbursementStatus(APIView):
             return Response({'error': 'Record not found'}, status=status.HTTP_404_NOT_FOUND)
         
 
-class ReturnDisbursementStatusMapping(APIView):
+class ReturnStatusMapping(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self,request):
+        input_params = request.query_params
         user = request.user
         profile = UserProfile.objects.get(user=user)
         role_type = profile.role_type
-        with open(r'construction\disbursement_status_mapping.json','r') as file:
+        with open(r'construction\status_mapping.json','r') as file:
             status_dictionary = json.load(file)
-        status_dictionary
+        status_dictionary = status_dictionary[input_params['application_status']]
         match role_type:
             case 'borrower':
                 output = status_dictionary['borrower']
@@ -368,7 +370,15 @@ class CreateRetrieveUpdateLoan(APIView):
         serializer = LoanSerializer(data = input_json)
 
         if serializer.is_valid():
-            serializer.save()
+            loan = serializer.save()
+            document_details = DocumentDetail.objects.all()
+
+            for detail in document_details:
+                Document.objects.create(
+                    loan=loan,
+                    document_detail=detail,
+                    status='Not Uploaded'
+                )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

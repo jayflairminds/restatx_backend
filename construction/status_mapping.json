@@ -1,5 +1,15 @@
 {
+    "disbursement" : 
+    {
     "borrower" : ["Request For Disbursement"],
     "inspector" : ["Approve","Request More Information From Borrower"],
     "lender": ["Request Information From Inspector","Request Information From Borrower","Approve","Complete"]
+    },
+
+    "document-upload":
+    {   
+        "borrower" : [],
+        "inspector" :["Approve","Reject"],
+        "lender" : ["Approve","Reject"]   
+    }
 }
