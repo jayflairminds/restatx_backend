@@ -24,8 +24,8 @@ import base64
 from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
 
-client = MongoClient(settings.MONGODB['URI'],ssl=True)
-db = client[settings.MONGODB['DATABASE_NAME']]
+client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
+db = client[settings.MONGODB['NAME']]
 fs = gridfs.GridFS(db)
 
 
