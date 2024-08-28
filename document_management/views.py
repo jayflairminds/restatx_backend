@@ -52,14 +52,14 @@ class DocumentManagement(APIView):
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
-                existing_instance.status = 'Pending'
+                existing_instance.status = 'In Review'
                 existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail,uploaded_at = datetime.datetime.now())
+                serializer.save(file_id=str(file_id), status='In Review', document_detail=document_detail,uploaded_at = datetime.datetime.now())
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -123,3 +123,41 @@ class DocSummaryView(APIView):
             return Response({"response":response})
         except Exception as e:
             return Response({"Error":str(e)},status=500)
+
+class DocumentStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        document_id = input_json.get('document_id')
+        comment = input_json.get('comment')
+
+        try:
+            my_instance = Document.objects.get(pk=document_id)
+        except Document.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+
+        update_status = None
+        if profile.role_type == "inspector" and my_instance.status == "In Review":
+            if status_action == "Approve":
+                update_status = "Pending Lender"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                my_instance.document_comment = comment
+
+        elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
+            if status_action == "Approve":
+                update_status = "Approved"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                my_instance.document_comment = comment
+        if update_status:
+            my_instance.status = update_status
+            my_instance.save(update_fields=['status', 'document_comment'] if 'document_comment' in input_json else ['status'])
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
