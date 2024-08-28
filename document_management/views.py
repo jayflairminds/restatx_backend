@@ -131,7 +131,7 @@ class DocumentStatus(APIView):
         input_json = request.data
         status_action = input_json.get('status_action')
         document_id = input_json.get('document_id')
-        comment = input_json.get('comment')
+        comment = input_json.get('document_comment')
 
         try:
             my_instance = Document.objects.get(pk=document_id)
