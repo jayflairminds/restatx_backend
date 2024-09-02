@@ -167,11 +167,44 @@ class CreateRetrieveUpdateDocumentType(APIView):
     permission_classes = [IsAuthenticated]
  
     def post(self,request):
-        input_json = request.data
-        project_type = input_json.get('project_type')  
-        document_type = input_json.get('document_type')
-        serializer = DocumentTypeSerializer(data = input_json)
+        try:
+            input_json = request.data
+            project_type = input_json.get('project_type')  
+            document_type = input_json.get('document_type')
+            serializer = DocumentTypeSerializer(data = input_json)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except DocumentType.DoesNotExist:
+            return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def get(self,request):
+        try:    
+            input_params = request.query_params
+            document_type_id= input_params.get('document_type_id')
+            document_type = DocumentType.objects.get(pk=document_type_id)
+            serializer = DocumentTypeSerializer(document_type)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request,id):
+        try:
+            document_details = DocumentType.objects.get(pk=id)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = DocumentTypeSerializer(data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    def delete(self, request, id):
+        try:
+            DocumentType.objects.get(pk=id)
+            DocumentType.objects.filter(id=id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
