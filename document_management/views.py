@@ -9,7 +9,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
-from .serializers import *
+from .helper_function import document_detail_list_json
 import datetime
 import json
 from django.db.models import Max,Sum,Q
@@ -100,7 +100,8 @@ class ListOfDocument(APIView):
             loan_id = input_param.get('loan_id')
             queryset = Document.objects.filter(loan_id =loan_id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
             serializer = DocumentSerializer(queryset, many=True)
-            return Response(serializer.data)
+            organized_data = document_detail_list_json(serializer)
+            return Response(organized_data)
         except Exception as e:
             return Response(f"Error: {str(e)}",status=500)
         
