@@ -183,8 +183,12 @@ class CreateRetrieveUpdateDocumentType(APIView):
         try:    
             input_params = request.query_params
             document_type_id= input_params.get('document_type_id')
-            document_type = DocumentType.objects.get(pk=document_type_id)
-            serializer = DocumentTypeSerializer(document_type)
+            if document_type_id:
+                document_type = DocumentType.objects.get(pk=document_type_id)
+                serializer = DocumentTypeSerializer(document_type)                
+            else:
+                document_types = DocumentType.objects.all()
+                serializer = DocumentTypeSerializer(document_types,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except DocumentType.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
