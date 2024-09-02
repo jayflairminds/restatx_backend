@@ -161,3 +161,17 @@ class DocumentStatus(APIView):
             return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+class CreateRetrieveUpdateDocumentType(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self,request):
+        input_json = request.data
+        project_type = input_json.get('project_type')  
+        document_type = input_json.get('document_type')
+        serializer = DocumentTypeSerializer(data = input_json)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
