@@ -9,4 +9,5 @@ urlpatterns = [
     path("document-update-status/",DocumentStatus.as_view(),name="document-update-status"),
     path("documenttype/",CreateRetrieveUpdateDocumentType.as_view(), name="documenttype"),
     path("documenttype/<int:id>",CreateRetrieveUpdateDocumentType.as_view(), name="documenttype"),
+    path("documentdetail/",CreateRetrieveUpdateDocumentDetail.as_view(),name="documentdetail")
 ]
