@@ -219,3 +219,28 @@ class CreateRetrieveUpdateDocumentType(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except DocumentType.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        
+
+class CreateRetrieveUpdateDocumentDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        document_type_ids = {doc.get("document_type_id") for doc in input_json}
+        document_types = DocumentType.objects.in_bulk(document_type_ids)
+        
+        document_details = []
+        for document in input_json:
+            document_type = document_types.get(document.get("document_type_id"))
+            if document_type:
+                for name in document.get('name'):
+                    document_details.append(
+                        DocumentDetail(
+                            document_type=document_type,
+                            name=name,
+                            type=document.get('type')
+                        )
+                    )
+        
+        DocumentDetail.objects.bulk_create(document_details)
+        return Response(status=status.HTTP_200_OK)
