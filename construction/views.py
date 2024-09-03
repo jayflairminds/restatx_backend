@@ -368,11 +368,11 @@ class CreateRetrieveUpdateLoan(APIView):
         input_json['status'] = 'Pending'
         input_json['borrower'] = self.request.user.id
         serializer = LoanSerializer(data = input_json)
-
+        document_type_obj = DocumentType.objects.filter(project_type = project_type).values_list('id', flat=True)
+        
         if serializer.is_valid():
             loan = serializer.save()
-            document_details = DocumentDetail.objects.all()
-
+            document_details = DocumentDetail.objects.filter(document_type_id__in = list(document_type_obj))
             for detail in document_details:
                 Document.objects.create(
                     loan=loan,
