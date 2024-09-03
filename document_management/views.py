@@ -244,3 +244,17 @@ class CreateRetrieveUpdateDocumentDetail(APIView):
         
         DocumentDetail.objects.bulk_create(document_details)
         return Response(status=status.HTTP_200_OK)
+
+class ListDocumentTypeForLoan(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DocumentTypeSerializer
+    
+    def get_queryset(self):
+        input_params = self.request.query_params
+        loan_id = input_params.get('loan_id')
+        try:
+            loantype = Loan.objects.get(loanid=loan_id).loantype
+            queryset = DocumentType.objects.filter(project_type=loantype)
+            return queryset
+        except Loan.DoesNotExist:
+            return Response({"error": "Loan not found"}, status=status.HTTP_404_NOT_FOUND)
