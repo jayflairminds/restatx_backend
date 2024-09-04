@@ -163,6 +163,7 @@ class DrawRequest(models.Model):
     budget_master = models.ForeignKey(BudgetMaster, on_delete=models.CASCADE)
     draw_request = models.IntegerField()
     released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     balance_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     draw_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
