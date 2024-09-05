@@ -174,4 +174,4 @@ class DrawRequest(models.Model):
     disbursement_status = models.CharField(max_length=200)
 
     def __str__(self):
-        return self.id
+        return f"Draw Request ID {self.id}"

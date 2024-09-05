@@ -541,31 +541,49 @@ class CreateUpdateDrawRequest(APIView):
  
     def post(self, request, *args, **kwargs):
         try:
-            loan_id = request.data.get("loan_id")
-            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan','loan_budget')
+            input_json = request.data
+            loan_id = input_json.get("loan_id")
+            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan_budget')
             created_data = []
-            for obj in budget_master_obj:
-                budget_amount = obj[2]
-                released_amount = 0
-                new_instance = DrawRequest(
-                    budget_master_id=obj[0],
-                    draw_request=0,
-                    released_amount=0,
-                    budget_amount = obj[2],
-                    funded_amount=0,
-                    balance_amount=budget_amount-released_amount,
-                    draw_amount=0,
-                    description="",
-                    invoice="",
-                    requested_date=None,
-                    disbursement_date=None,
-                    disbursement_status="",
-                )
-            created_data.append(new_instance)
-
+            lis_budget_ids = [i[0] for i in budget_master_obj ]
+            draw_req_obj = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids))
+            if len(draw_req_obj) == 0:                
+                for obj in budget_master_obj:
+                    budget_amount = obj[1]
+                    released_amount = 0                    
+                    new_instance = DrawRequest(
+                        budget_master_id=obj[0],
+                        draw_request= 0,                    
+                        released_amount=released_amount,
+                        budget_amount=budget_amount,
+                        funded_amount=0,
+                        balance_amount = budget_amount-released_amount,
+                        draw_amount = 0,
+                        description = None,
+                        requested_date=datetime.date.today(),
+                    )
+                    created_data.append(new_instance)
+            else:
+                val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
+                draw_request = val[0] +1
+                for obj in budget_master_obj:
+                    budget_amount = obj[1]  
+                    released_amount_previes = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
+                    released_amount_list = list(released_amount_previes)
+                    released_amount=released_amount_list[0]
+                    new_instance = DrawRequest(
+                        budget_master_id=obj[0],
+                        draw_request = draw_request,                    
+                        released_amount = released_amount,
+                        budget_amount = budget_amount,
+                        funded_amount = 0,
+                        balance_amount = budget_amount-released_amount,
+                        draw_amount = 0,
+                        description = None,
+                        requested_date=datetime.date.today(),
+                    )
+                    created_data.append(new_instance)
             DrawRequest.objects.bulk_create(created_data)
-            return Response(status=status.HTTP_201_CREATED)
- 
- 
+            return Response(status=status.HTTP_201_CREATED) 
         except DrawRequest.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
