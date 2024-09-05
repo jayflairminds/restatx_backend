@@ -488,3 +488,50 @@ class ListUsesType(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND) 
         except BudgetMaster.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND) 
+
+class LoanApprovalStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        loan_obj = Loan.objects.get(pk=loan_id)
+        if loan_obj.status == 'Pending' or loan_obj.status == 'Rejected':
+            loan_obj.status = 'In Review'
+            loan_obj.save()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response({'error':'loan can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
+
+    def put(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        loan_id = input_json.get('loan_id')
+
+        try:
+            my_instance = Loan.objects.get(pk=loan_id)
+        except Loan.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+
+        update_status = None
+        if profile.role_type == "inspector" and my_instance.status == "In Review":
+            if status_action == "Approve":
+                update_status = "In Approval"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+
+        elif profile.role_type == "lender" and my_instance.status == "In Approval":
+            if status_action == "Approve":
+                update_status = "Approved"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+        if update_status:
+            my_instance.status = update_status
+            my_instance.save(update_fields='status')
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+        
