@@ -541,48 +541,30 @@ class CreateUpdateDrawRequest(APIView):
  
     def post(self, request, *args, **kwargs):
         try:
-            loan_id = request.data.get("loan_id")              
-            budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id', flat=True)
-            print("budget ids:", budget_master_ids)
+            loan_id = request.data.get("loan_id")
+            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan','loan_budget')
             created_data = []
-            for bid in budget_master_ids:
-             
+            for obj in budget_master_obj:
+                budget_amount = obj[2]
+                released_amount = 0
                 new_instance = DrawRequest(
-                    budget_master_id=bid,
+                    budget_master_id=obj[0],
                     draw_request=0,
                     released_amount=0,
-                    total_released_amount=0,
+                    budget_amount = obj[2],
                     funded_amount=0,
-                    balance_amount=0,
+                    balance_amount=budget_amount-released_amount,
                     draw_amount=0,
                     description="",
                     invoice="",
-                    requested_date=None,  # Use None for empty datetime fields
-                    disbursement_date=None,  # Use None for empty datetime fields
+                    requested_date=None,
+                    disbursement_date=None,
                     disbursement_status="",
                 )
- 
-                # Save the instance to the database
-                new_instance.save()
- 
-                # Append the saved instance data to the response list
-                created_data.append({
-                    "id": new_instance.id,
-                    "budget_master": new_instance.budget_master.id,
-                    "draw_request": new_instance.draw_request,
-                    "released_amount": new_instance.released_amount,
-                    "total_released_amount": new_instance.total_released_amount,
-                    "funded_amount": new_instance.funded_amount,
-                    "balance_amount": new_instance.balance_amount,
-                    "draw_amount": new_instance.draw_amount,
-                    "description": new_instance.description,
-                    "invoice": new_instance.invoice,
-                    "requested_date": new_instance.requested_date,
-                    "disbursement_date": new_instance.disbursement_date,
-                    "disbursement_status": new_instance.disbursement_status,
-                })
- 
-            return Response(created_data, status=status.HTTP_201_CREATED)
+            created_data.append(new_instance)
+
+            DrawRequest.objects.bulk_create(created_data)
+            return Response(status=status.HTTP_201_CREATED)
  
  
         except DrawRequest.DoesNotExist:
