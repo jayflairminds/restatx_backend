@@ -157,3 +157,21 @@ class DrawTracking(models.Model):
 
     def __str__(self):
         return self.id
+    
+class DrawRequest(models.Model):
+    id = models.AutoField(primary_key=True)
+    budget_master = models.ForeignKey(BudgetMaster, on_delete=models.CASCADE)
+    draw_request = models.IntegerField()
+    released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    budget_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    balance_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    draw_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    description = models.CharField(max_length=200,null=True)
+    invoice = models.CharField(max_length=100,null=True)
+    requested_date = models.DateTimeField(null=True, blank=True)
+    disbursement_date = models.DateTimeField(null=True, blank=True)
+    disbursement_status = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.id

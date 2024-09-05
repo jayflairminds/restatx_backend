@@ -1,11 +1,18 @@
 from django.db import models
 from construction.models import Loan
 
+class DocumentType(models.Model):
+    id = models.AutoField(primary_key=True)
+    project_type = models.CharField(max_length=100,null=True)
+    document_type = models.CharField(max_length=300, null=True)
+ 
+ 
 class DocumentDetail(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=255,null=True)
+    name = models.CharField(max_length=500,null=True)
     type = models.CharField(max_length=150,null=True)
-
+    document_type = models.ForeignKey(DocumentType,on_delete=models.CASCADE,null=True)
+ 
     def __str__(self):
         return f"{self.name} ({self.type})"
     

@@ -9,7 +9,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
-from .serializers import *
+from .helper_function import document_detail_list_json
 import datetime
 import json
 from django.db.models import Max,Sum,Q
@@ -52,14 +52,14 @@ class DocumentManagement(APIView):
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
-                existing_instance.status = 'Pending'
+                existing_instance.status = 'In Review'
                 existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id), status='Pending', document_detail=document_detail,uploaded_at = datetime.datetime.now())
+                serializer.save(file_id=str(file_id), status='In Review', document_detail=document_detail,uploaded_at = datetime.datetime.now())
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -98,9 +98,20 @@ class ListOfDocument(APIView):
         try:
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
+            document_type_id = input_param.get('document_type_id')
+            document_status = input_param.get("document_status")
             queryset = Document.objects.filter(loan_id =loan_id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
+
+            if document_type_id:
+                queryset = queryset.filter(document_detail__document_type_id=document_type_id)                
+            
+            if document_status:
+                queryset = queryset.filter(status=document_status)
+            queryset = queryset.select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
+            
             serializer = DocumentSerializer(queryset, many=True)
-            return Response(serializer.data)
+            organized_data = document_detail_list_json(serializer)
+            return Response(organized_data)
         except Exception as e:
             return Response(f"Error: {str(e)}",status=500)
         
@@ -123,3 +134,133 @@ class DocSummaryView(APIView):
             return Response({"response":response})
         except Exception as e:
             return Response({"Error":str(e)},status=500)
+
+class DocumentStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        document_id = input_json.get('document_id')
+        comment = input_json.get('document_comment')
+
+        try:
+            my_instance = Document.objects.get(pk=document_id)
+        except Document.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+
+        update_status = None
+        if profile.role_type == "inspector" and my_instance.status == "In Review":
+            if status_action == "Approve":
+                update_status = "Pending Lender"
+                my_instance.document_comment = comment
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                my_instance.document_comment = comment
+
+        elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
+            if status_action == "Approve":
+                update_status = "Approved"
+                my_instance.document_comment = comment
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                my_instance.document_comment = comment
+        if update_status:
+            my_instance.status = update_status
+            my_instance.save(update_fields=['status', 'document_comment'] if 'document_comment' in input_json else ['status'])
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+class CreateRetrieveUpdateDocumentType(APIView):
+    permission_classes = [IsAuthenticated]
+ 
+    def post(self,request):
+        try:
+            input_json = request.data
+            project_type = input_json.get('project_type')  
+            document_type = input_json.get('document_type')
+            serializer = DocumentTypeSerializer(data = input_json)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except DocumentType.DoesNotExist:
+            return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def get(self,request):
+        try:    
+            input_params = request.query_params
+            document_type_id= input_params.get('document_type_id')
+            if document_type_id:
+                document_type = DocumentType.objects.get(pk=document_type_id)
+                serializer = DocumentTypeSerializer(document_type)                
+            else:
+                document_types = DocumentType.objects.all()
+                serializer = DocumentTypeSerializer(document_types,many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request,id):
+        try:
+            DocumentType.objects.get(pk=id)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = DocumentTypeSerializer(data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+    def delete(self, request, id):
+        try:
+            DocumentType.objects.get(pk=id)
+            DocumentType.objects.filter(id=id).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except DocumentType.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        
+
+class CreateRetrieveUpdateDocumentDetail(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        document_type_ids = {doc.get("document_type_id") for doc in input_json}
+        document_types = DocumentType.objects.in_bulk(document_type_ids)
+        
+        document_details = []
+        for document in input_json:
+            document_type = document_types.get(document.get("document_type_id"))
+            if document_type:
+                for name in document.get('name'):
+                    document_details.append(
+                        DocumentDetail(
+                            document_type=document_type,
+                            name=name,
+                            type=document.get('type')
+                        )
+                    )
+        
+        DocumentDetail.objects.bulk_create(document_details)
+        return Response(status=status.HTTP_200_OK)
+
+class ListDocumentTypeForLoan(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DocumentTypeSerializer
+    
+    def get_queryset(self):
+        input_params = self.request.query_params
+        loan_id = input_params.get('loan_id')
+        try:
+            loantype = Loan.objects.get(loanid=loan_id).loantype
+            queryset = DocumentType.objects.filter(project_type=loantype)
+            return queryset
+        except Loan.DoesNotExist:
+            return Response({"error": "Loan not found"}, status=status.HTTP_404_NOT_FOUND)
