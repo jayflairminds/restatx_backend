@@ -530,7 +530,7 @@ class LoanApprovalStatus(APIView):
                 update_status = "Rejected"
         if update_status:
             my_instance.status = update_status
-            my_instance.save(update_fields='status')
+            my_instance.save()
             return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
