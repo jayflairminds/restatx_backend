@@ -667,6 +667,16 @@ class DrawTrackingListView(generics.ListAPIView):
 class RetrieveDeleteUpdateDrawTracking(APIView):
     permission_classes = [IsAuthenticated]
 
-    def delete(self,request,id):
-        DrawTracking.objects.get(pk=id).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def delete(self, request, id):
+        try:
+            draw_tracking_obj = DrawTracking.objects.get(pk=id)
+            draw_request = draw_tracking_obj.draw_request
+            loan_id = draw_tracking_obj.loan
+            draw_tracking_obj.delete()
+            budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id',flat=True)
+            DrawRequest.objects.filter(draw_request=draw_request, budget_master_id__in = budget_master_ids).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except DrawTracking.DoesNotExist:
+            return Response({"error": "DrawTracking object not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
