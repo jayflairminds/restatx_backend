@@ -663,3 +663,10 @@ class DrawTrackingListView(generics.ListAPIView):
         input_params = self.request.query_params
         loan_id = input_params.get("loan_id")
         return DrawTracking.objects.filter(loan_id=loan_id)
+    
+class RetrieveDeleteUpdateDrawTracking(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self,request,id):
+        DrawTracking.objects.get(pk=id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
