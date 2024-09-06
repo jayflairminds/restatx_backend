@@ -146,17 +146,19 @@ class BudgetMaster(models.Model):
     
 class DrawTracking(models.Model):
     id = models.AutoField(primary_key=True)
-    budget_master = models.ForeignKey(BudgetMaster, on_delete=models.CASCADE)
     draw_request = models.IntegerField()
-    planned_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
-    requested_disbursement_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
-    date_scheduled = models.DateTimeField(null=True, blank=True)
-    date_requested = models.DateTimeField(null=True, blank=True)
-    date_approved = models.DateTimeField(null=True, blank=True)
-    disbursement_status = models.CharField(max_length=200)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE,null=True)
+    total_released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_budget_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_balance_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_draw_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    requested_date = models.DateTimeField(null=True, blank=True)
+    disbursement_date = models.DateTimeField(null=True, blank=True)
+    draw_status = models.CharField(max_length=200)
 
     def __str__(self):
-        return self.id
+        return f"Draw Tracking ID {self.id}"
     
 class DrawRequest(models.Model):
     id = models.AutoField(primary_key=True)
@@ -171,7 +173,6 @@ class DrawRequest(models.Model):
     invoice = models.CharField(max_length=100,null=True)
     requested_date = models.DateTimeField(null=True, blank=True)
     disbursement_date = models.DateTimeField(null=True, blank=True)
-    disbursement_status = models.CharField(max_length=200)
 
     def __str__(self):
         return f"Draw Request ID {self.id}"
