@@ -21,5 +21,6 @@ urlpatterns = [
     path("list-uses-type/",ListUsesType.as_view(),name='list-uses-type'),
     path("loan-approval/",LoanApprovalStatus.as_view(),name="loan-approval"),
     path("submit-budget/",LoanApprovalStatus.as_view(),name="submit-budget/"),
-    path("draw-request/",CreateUpdateDrawRequest.as_view(),name='draw-request')
+    path("draw-request/",CreateUpdateDrawRequest.as_view(),name='draw-request'),
+    path("list-draw-tracking/",DrawTrackingListView.as_view(),name='list-draw-tracking')
 ]
