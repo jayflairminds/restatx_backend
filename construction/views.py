@@ -630,3 +630,15 @@ class CreateUpdateDrawRequest(APIView):
                 
             except DrawRequest.DoesNotExist:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
+            
+
+
+class DrawTrackingListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated] 
+    serializer_class = DrawTrackingSerializer
+    def get_queryset(self):
+        input_json = self.request.query_params
+        loan_id = input_json['loan_id']      
+        details = DrawTracking.objects.filter(loan_id=loan_id)
+        return details
+ 
