@@ -63,3 +63,10 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = "__all__"
+
+class DrawRequestSerializer(serializers.ModelSerializer):
+    uses = serializers.CharField(source="budget_master.uses", read_only=True)
+    uses_type = serializers.CharField(source="budget_master.uses_type", read_only=True)
+    class Meta:
+        model = DrawRequest
+        fields = "__all__"
