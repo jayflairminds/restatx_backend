@@ -653,3 +653,13 @@ class CreateUpdateDrawRequest(APIView):
             )
         serializers = DrawRequestSerializer(draw_request_obj,many=True)
         return Response(serializers.data, status=status.HTTP_200_OK)
+    
+
+class DrawTrackingListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DrawTrackingSerializer
+
+    def get_queryset(self):
+        input_params = self.request.query_params
+        loan_id = input_params.get("loan_id")
+        return DrawTracking.objects.filter(loan_id=loan_id)
