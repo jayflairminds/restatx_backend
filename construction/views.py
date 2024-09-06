@@ -629,39 +629,4 @@ class CreateUpdateDrawRequest(APIView):
                     return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
                 
             except DrawRequest.DoesNotExist:
-                return Response(status=status.HTTP_400_BAD_REQUEST) 
-        
-    
-    def get(self,request):
-        input_params = request.query_params
-        loan_id = input_params.get('loan_id')
-        draw_request = input_params.get('draw_request')
-        if not loan_id:
-            return Response({"error":"loan_id is required"},status=status.HTTP_400_BAD_REQUEST)
-        
-
-        budget_master_id = BudgetMaster.objects.filter(loan_id = loan_id).values_list('id',flat=True)
-
-        if draw_request:
-            draw_request_obj = DrawRequest.objects.filter(
-                budget_master_id__in= budget_master_id,
-                draw_request = draw_request
-            )
-        else:
-            draw_request_obj = DrawRequest.objects.filter(
-                budget_master_id_in= budget_master_id
-            )
-        serializers = DrawRequestSerializer(draw_request_obj,many=True)
-        return Response(serializers.data, status=status.HTTP_200_OK)
-            
-
-
-class DrawTrackingListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated] 
-    serializer_class = DrawTrackingSerializer
-    def get_queryset(self):
-        input_json = self.request.query_params
-        loan_id = input_json['loan_id']      
-        details = DrawTracking.objects.filter(loan_id=loan_id)
-        return details
- 
+                return Response(status=status.HTTP_400_BAD_REQUEST)
