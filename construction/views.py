@@ -560,7 +560,7 @@ class CreateUpdateDrawRequest(APIView):
                         balance_amount = budget_amount-released_amount,
                         draw_amount = 0,
                         description = None,
-                        requested_date=datetime.date.today(),
+                        requested_date=datetime.datetime.now(),
                     )
                     created_data.append(new_instance)
             else:
@@ -580,7 +580,7 @@ class CreateUpdateDrawRequest(APIView):
                         balance_amount = budget_amount-released_amount,
                         draw_amount = 0,
                         description = None,
-                        requested_date=datetime.date.today(),
+                        requested_date=datetime.datetime.now(),
                     )
                     created_data.append(new_instance)
             DrawRequest.objects.bulk_create(created_data)
@@ -598,8 +598,8 @@ class CreateUpdateDrawRequest(APIView):
             totals['loan'] = Loan.objects.get(pk = loan_id)
             totals['draw_request'] = draw_request
             DrawTracking.objects.create(**totals)
-            
-            return Response(status=status.HTTP_201_CREATED) 
+            serializers = DrawRequestSerializer(created_data,many=True)
+            return Response(serializers.data,status=status.HTTP_201_CREATED) 
         except DrawRequest.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         
@@ -649,7 +649,7 @@ class CreateUpdateDrawRequest(APIView):
             )
         else:
             draw_request_obj = DrawRequest.objects.filter(
-                budget_master_id_in= budget_master_id
+                budget_master_id__in= budget_master_id
             )
         serializers = DrawRequestSerializer(draw_request_obj,many=True)
         return Response(serializers.data, status=status.HTTP_200_OK)
