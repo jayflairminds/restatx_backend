@@ -530,7 +530,7 @@ class LoanApprovalStatus(APIView):
                 update_status = "Rejected"
         if update_status:
             my_instance.status = update_status
-            my_instance.save(update_fields='status')
+            my_instance.save()
             return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
@@ -541,49 +541,115 @@ class CreateUpdateDrawRequest(APIView):
  
     def post(self, request, *args, **kwargs):
         try:
-            loan_id = request.data.get("loan_id")              
-            budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id', flat=True)
-            print("budget ids:", budget_master_ids)
+            input_json = request.data
+            loan_id = input_json.get("loan_id")
+            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan_budget')
             created_data = []
-            for bid in budget_master_ids:
-             
-                new_instance = DrawRequest(
-                    budget_master_id=bid,
-                    draw_request=0,
-                    released_amount=0,
-                    total_released_amount=0,
-                    funded_amount=0,
-                    balance_amount=0,
-                    draw_amount=0,
-                    description="",
-                    invoice="",
-                    requested_date=None,  # Use None for empty datetime fields
-                    disbursement_date=None,  # Use None for empty datetime fields
-                    disbursement_status="",
+            lis_budget_ids = [i[0] for i in budget_master_obj ]
+            draw_req_obj = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids))
+            if len(draw_req_obj) == 0:                
+                for obj in budget_master_obj:
+                    budget_amount = obj[1]
+                    released_amount = 0                    
+                    new_instance = DrawRequest(
+                        budget_master_id=obj[0],
+                        draw_request= 0,                    
+                        released_amount=released_amount,
+                        budget_amount=budget_amount,
+                        funded_amount=0,
+                        balance_amount = budget_amount-released_amount,
+                        draw_amount = 0,
+                        description = None,
+                        requested_date=datetime.date.today(),
+                    )
+                    created_data.append(new_instance)
+            else:
+                val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
+                draw_request = val[0] +1
+                for obj in budget_master_obj:
+                    budget_amount = obj[1]  
+                    released_amount_previes = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
+                    released_amount_list = list(released_amount_previes)
+                    released_amount=released_amount_list[0]
+                    new_instance = DrawRequest(
+                        budget_master_id=obj[0],
+                        draw_request = draw_request,                    
+                        released_amount = released_amount,
+                        budget_amount = budget_amount,
+                        funded_amount = 0,
+                        balance_amount = budget_amount-released_amount,
+                        draw_amount = 0,
+                        description = None,
+                        requested_date=datetime.date.today(),
+                    )
+                    created_data.append(new_instance)
+            DrawRequest.objects.bulk_create(created_data)
+            
+            totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
+                    draw_request=draw_request
+                ).aggregate(
+                    total_released_amount=Sum('released_amount'),
+                    total_budget_amount=Sum('budget_amount'),
+                    total_funded_amount=Sum('funded_amount'),
+                    total_balance_amount=Sum('balance_amount'),
+                    total_draw_amount=Sum('draw_amount')
                 )
- 
-                # Save the instance to the database
-                new_instance.save()
- 
-                # Append the saved instance data to the response list
-                created_data.append({
-                    "id": new_instance.id,
-                    "budget_master": new_instance.budget_master.id,
-                    "draw_request": new_instance.draw_request,
-                    "released_amount": new_instance.released_amount,
-                    "total_released_amount": new_instance.total_released_amount,
-                    "funded_amount": new_instance.funded_amount,
-                    "balance_amount": new_instance.balance_amount,
-                    "draw_amount": new_instance.draw_amount,
-                    "description": new_instance.description,
-                    "invoice": new_instance.invoice,
-                    "requested_date": new_instance.requested_date,
-                    "disbursement_date": new_instance.disbursement_date,
-                    "disbursement_status": new_instance.disbursement_status,
-                })
- 
-            return Response(created_data, status=status.HTTP_201_CREATED)
- 
- 
+            totals['requested_date']=datetime.date.today()
+            totals['loan'] = Loan.objects.get(pk = loan_id)
+            totals['draw_request'] = draw_request
+            DrawTracking.objects.create(**totals)
+            
+            return Response(status=status.HTTP_201_CREATED) 
         except DrawRequest.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def put(self, request):
+            try:
+                input_json = request.data
+                id = input_json.get('id')
+                try:
+                    my_instance = DrawRequest.objects.get(pk=id)
+                except Loan.DoesNotExist:
+                    return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)        
+                user = request.user
+                profile = UserProfile.objects.get(user=user)
+
+                if profile.role_type == "borrower":
+                    my_instance.draw_amount=input_json.get('draw_amount')
+                    my_instance.description=input_json.get('description')
+                    my_instance.save()
+                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+
+                elif profile.role_type == "lender":
+                    my_instance.funded_amount = input_json.get('funded_amount')
+                    my_instance.save()
+                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+
+                else:
+                    return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            except DrawRequest.DoesNotExist:
+                return Response(status=status.HTTP_400_BAD_REQUEST) 
+        
+    
+    def get(self,request):
+        input_params = request.query_params
+        loan_id = input_params.get('loan_id')
+        draw_request = input_params.get('draw_request')
+        if not loan_id:
+            return Response({"error":"loan_id is required"},status=status.HTTP_400_BAD_REQUEST)
+        
+
+        budget_master_id = BudgetMaster.objects.filter(loan_id = loan_id).values_list('id',flat=True)
+
+        if draw_request:
+            draw_request_obj = DrawRequest.objects.filter(
+                budget_master_id__in= budget_master_id,
+                draw_request = draw_request
+            )
+        else:
+            draw_request_obj = DrawRequest.objects.filter(
+                budget_master_id_in= budget_master_id
+            )
+        serializers = DrawRequestSerializer(draw_request_obj,many=True)
+        return Response(serializers.data, status=status.HTTP_200_OK)
