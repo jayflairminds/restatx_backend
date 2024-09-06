@@ -584,6 +584,49 @@ class CreateUpdateDrawRequest(APIView):
                     )
                     created_data.append(new_instance)
             DrawRequest.objects.bulk_create(created_data)
+            
+            totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
+                    draw_request=draw_request
+                ).aggregate(
+                    total_released_amount=Sum('released_amount'),
+                    total_budget_amount=Sum('budget_amount'),
+                    total_funded_amount=Sum('funded_amount'),
+                    total_balance_amount=Sum('balance_amount'),
+                    total_draw_amount=Sum('draw_amount')
+                )
+            totals['requested_date']=datetime.date.today()
+            totals['loan'] = Loan.objects.get(pk = loan_id)
+            totals['draw_request'] = draw_request
+            DrawTracking.objects.create(**totals)
+            
             return Response(status=status.HTTP_201_CREATED) 
         except DrawRequest.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+    def put(self, request):
+            try:
+                input_json = request.data
+                id = input_json.get('id')
+                try:
+                    my_instance = DrawRequest.objects.get(pk=id)
+                except Loan.DoesNotExist:
+                    return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)        
+                user = request.user
+                profile = UserProfile.objects.get(user=user)
+
+                if profile.role_type == "borrower":
+                    my_instance.draw_amount=input_json.get('draw_amount')
+                    my_instance.description=input_json.get('description')
+                    my_instance.save()
+                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+
+                elif profile.role_type == "lender":
+                    my_instance.funded_amount = input_json.get('funded_amount')
+                    my_instance.save()
+                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+
+                else:
+                    return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            except DrawRequest.DoesNotExist:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
