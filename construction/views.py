@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 from django.db.models import Max,Sum
+from django.utils import timezone
 
 
 
@@ -107,7 +108,7 @@ class UpdateDisbursementStatus(APIView):
             if status_action == "Request For Disbursement":
                 update_status = "Pending Inspection"
                 my_instance = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id)
-                my_instance.date_requested = datetime.datetime.now()
+                my_instance.date_requested = timezone.now()
                 my_instance.requested_disbursement_amount = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id).planned_disbursement_amount 
                 my_instance.save(update_fields=['date_requested','requested_disbursement_amount'])
         elif profile.role_type == "inspector":
@@ -536,6 +537,7 @@ class LoanApprovalStatus(APIView):
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+
 class CreateUpdateDrawRequest(APIView):
     permission_classes = [IsAuthenticated]  
  
@@ -543,65 +545,67 @@ class CreateUpdateDrawRequest(APIView):
         try:
             input_json = request.data
             loan_id = input_json.get("loan_id")
-            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan_budget')
+
+            budget_master_objs = BudgetMaster.objects.filter(loan_id=loan_id).values('id', 'loan_budget')
+            budget_ids = [bm['id'] for bm in budget_master_objs]
+
+            draw_requests = DrawRequest.objects.filter(budget_master_id__in=budget_ids)
+            draw_request_max = draw_requests.aggregate(max_draw_request=Sum('draw_request'))['max_draw_request'] or 0
+            new_draw_request_number = draw_request_max + 1
+
             created_data = []
-            lis_budget_ids = [i[0] for i in budget_master_obj ]
-            draw_req_obj = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids))
-            if len(draw_req_obj) == 0:                
-                for obj in budget_master_obj:
-                    budget_amount = obj[1]
-                    released_amount = 0                    
-                    new_instance = DrawRequest(
-                        budget_master_id=obj[0],
-                        draw_request= 0,                    
-                        released_amount=released_amount,
-                        budget_amount=budget_amount,
-                        funded_amount=0,
-                        balance_amount = budget_amount-released_amount,
-                        draw_amount = 0,
-                        description = None,
-                        requested_date=datetime.date.today(),
-                    )
-                    created_data.append(new_instance)
-            else:
-                val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
-                draw_request = val[0] +1
-                for obj in budget_master_obj:
-                    budget_amount = obj[1]  
-                    released_amount_previes = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
-                    released_amount_list = list(released_amount_previes)
-                    released_amount=released_amount_list[0]
-                    new_instance = DrawRequest(
-                        budget_master_id=obj[0],
-                        draw_request = draw_request,                    
-                        released_amount = released_amount,
-                        budget_amount = budget_amount,
-                        funded_amount = 0,
-                        balance_amount = budget_amount-released_amount,
-                        draw_amount = 0,
-                        description = None,
-                        requested_date=datetime.date.today(),
-                    )
-                    created_data.append(new_instance)
-            DrawRequest.objects.bulk_create(created_data)
-            
-            totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
-                    draw_request=draw_request
-                ).aggregate(
-                    total_released_amount=Sum('released_amount'),
-                    total_budget_amount=Sum('budget_amount'),
-                    total_funded_amount=Sum('funded_amount'),
-                    total_balance_amount=Sum('balance_amount'),
-                    total_draw_amount=Sum('draw_amount')
+
+            released_amounts_map = {
+                dr['budget_master_id']: dr['released_amount']
+                for dr in draw_requests.values('budget_master_id', 'released_amount')
+            }
+
+            for budget_master in budget_master_objs:
+                budget_master_id = budget_master['id']
+                budget_amount = budget_master['loan_budget']
+                released_amount = released_amounts_map.get(budget_master_id, 0)
+
+                new_instance = DrawRequest(
+                    budget_master_id=budget_master_id,
+                    draw_request=new_draw_request_number,
+                    released_amount=released_amount,
+                    budget_amount=budget_amount,
+                    funded_amount=0,
+                    balance_amount=budget_amount - released_amount,
+                    draw_amount=0,
+                    description=None,
+                    requested_date=timezone.now(),
                 )
-            totals['requested_date']=datetime.date.today()
-            totals['loan'] = Loan.objects.get(pk = loan_id)
-            totals['draw_request'] = draw_request
+                created_data.append(new_instance)
+
+            DrawRequest.objects.bulk_create(created_data)
+
+            totals = DrawRequest.objects.filter(
+                budget_master_id__in=budget_ids,
+                draw_request=new_draw_request_number
+            ).aggregate(
+                total_released_amount=Sum('released_amount'),
+                total_budget_amount=Sum('budget_amount'),
+                total_funded_amount=Sum('funded_amount'),
+                total_balance_amount=Sum('balance_amount'),
+                total_draw_amount=Sum('draw_amount')
+            )
+
+            totals.update({
+                'requested_date': timezone.now(),
+                'loan': Loan.objects.get(pk=loan_id),
+                'draw_request': new_draw_request_number,
+                'draw_status': "Pending",
+            })
+
             DrawTracking.objects.create(**totals)
-            
-            return Response(status=status.HTTP_201_CREATED) 
+
+            serializer = DrawRequestSerializer(created_data, many=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         except DrawRequest.DoesNotExist:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
         
     def put(self, request):
             try:
@@ -618,12 +622,12 @@ class CreateUpdateDrawRequest(APIView):
                     my_instance.draw_amount=input_json.get('draw_amount')
                     my_instance.description=input_json.get('description')
                     my_instance.save()
-                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+                    return Response({"Response":"Fields Updated"},status=status.HTTP_200_OK)
 
                 elif profile.role_type == "lender":
                     my_instance.funded_amount = input_json.get('funded_amount')
                     my_instance.save()
-                    return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+                    return Response({"Response":"Funded Amount Updated"},status=status.HTTP_200_OK)
 
                 else:
                     return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
@@ -649,7 +653,84 @@ class CreateUpdateDrawRequest(APIView):
             )
         else:
             draw_request_obj = DrawRequest.objects.filter(
-                budget_master_id_in= budget_master_id
+                budget_master_id__in= budget_master_id
             )
         serializers = DrawRequestSerializer(draw_request_obj,many=True)
         return Response(serializers.data, status=status.HTTP_200_OK)
+    
+
+class DrawTrackingListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DrawTrackingSerializer
+
+    def get_queryset(self):
+        input_params = self.request.query_params
+        loan_id = input_params.get("loan_id")
+        return DrawTracking.objects.filter(loan_id=loan_id)
+    
+class RetrieveDeleteUpdateDrawTracking(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, id):
+        try:
+            draw_tracking_obj = DrawTracking.objects.get(pk=id)
+            draw_request = draw_tracking_obj.draw_request
+            loan_id = draw_tracking_obj.loan
+            draw_tracking_obj.delete()
+            budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id',flat=True)
+            DrawRequest.objects.filter(draw_request=draw_request, budget_master_id__in = budget_master_ids).delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except DrawTracking.DoesNotExist:
+            return Response({"error": "DrawTracking object not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class DrawTrackingStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        draw_request = input_json.get('draw_request')
+        try:
+            draw_tracking_obj = DrawTracking.objects.get(loan_id=loan_id, draw_request=draw_request)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Draw tracking object not found'})
+
+        if draw_tracking_obj.draw_status in ['Pending', 'Rejected']:
+            draw_tracking_obj.draw_status = 'In Review'
+            draw_tracking_obj.save()
+            return Response({"Response":"Draw successfully submitted"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error':'draw can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
+
+    def put(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        draw_tracking_id = input_json.get('draw_tracking_id')
+
+        try:
+            my_instance = DrawTracking.objects.get(pk=draw_tracking_id)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+        update_status = None
+        if profile.role_type == "inspector" and my_instance.draw_status == "In Review":
+            if status_action == "Approve":
+                update_status = "In Approval"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+
+        elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
+            if status_action == "Approve":
+                update_status = "Approved"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+        if update_status:
+            my_instance.draw_status = update_status
+            my_instance.save()
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
