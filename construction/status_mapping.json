@@ -18,5 +18,12 @@
         "borrower" : [],
         "inspector": ["Approve","Reject"],
         "lender": ["Approve","Reject"]
+    },
+
+    "draw-approval":
+    {
+        "borrower" : [],
+        "inspector": ["Approve","Reject"],
+        "lender": ["Approve","Reject"]
     }
 }
