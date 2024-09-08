@@ -15,6 +15,7 @@ import json
 import os
 from django.db.models import Max,Sum
 from django.utils import timezone
+from alerts.views import create_notification
 
 
 
@@ -374,12 +375,20 @@ class CreateRetrieveUpdateLoan(APIView):
         if serializer.is_valid():
             loan = serializer.save()
             document_details = DocumentDetail.objects.filter(document_type_id__in = list(document_type_obj))
+            document_details_list = list()
             for detail in document_details:
-                Document.objects.create(
+                document_details_list.append(Document(
                     loan=loan,
                     document_detail=detail,
                     status='Not Uploaded'
-                )
+                ))
+            
+            Document.objects.bulk_create(document_details_list)
+            user = request.user
+            inspector = loan.inspector
+            lender = loan.lender
+            create_notification(inspector, "Loan Application", f"{user.username} has applied for a loan.", 'AL')
+            create_notification(lender, "Loan Application", f"{user.username} has applied for a loan.", 'AL')            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
