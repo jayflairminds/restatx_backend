@@ -14,6 +14,7 @@ import datetime
 import json
 import os
 from django.db.models import Max,Sum
+from django.utils import timezone
 
 
 
@@ -107,7 +108,7 @@ class UpdateDisbursementStatus(APIView):
             if status_action == "Request For Disbursement":
                 update_status = "Pending Inspection"
                 my_instance = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id)
-                my_instance.date_requested = datetime.datetime.now()
+                my_instance.date_requested = timezone.now()
                 my_instance.requested_disbursement_amount = LoanDisbursementSchedule.objects.get(pk=loan_disbursment_id).planned_disbursement_amount 
                 my_instance.save(update_fields=['date_requested','requested_disbursement_amount'])
         elif profile.role_type == "inspector":
@@ -560,7 +561,7 @@ class CreateUpdateDrawRequest(APIView):
                         balance_amount = budget_amount-released_amount,
                         draw_amount = 0,
                         description = None,
-                        requested_date=datetime.datetime.now(),
+                        requested_date=timezone.now(),
                     )
                     created_data.append(new_instance)
             else:
@@ -580,7 +581,7 @@ class CreateUpdateDrawRequest(APIView):
                         balance_amount = budget_amount-released_amount,
                         draw_amount = 0,
                         description = None,
-                        requested_date=datetime.datetime.now(),
+                        requested_date=timezone.now(),
                     )
                     created_data.append(new_instance)
             DrawRequest.objects.bulk_create(created_data)
@@ -594,9 +595,10 @@ class CreateUpdateDrawRequest(APIView):
                     total_balance_amount=Sum('balance_amount'),
                     total_draw_amount=Sum('draw_amount')
                 )
-            totals['requested_date']=datetime.date.today()
+            totals['requested_date']=timezone.now()
             totals['loan'] = Loan.objects.get(pk = loan_id)
             totals['draw_request'] = draw_request
+            totals['draw_status'] = "Pending"
             DrawTracking.objects.create(**totals)
             serializers = DrawRequestSerializer(created_data,many=True)
             return Response(serializers.data,status=status.HTTP_201_CREATED) 
@@ -680,3 +682,53 @@ class RetrieveDeleteUpdateDrawTracking(APIView):
             return Response({"error": "DrawTracking object not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+class DrawTrackingStatus(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+        loan_id = input_json.get('loan_id')
+        draw_request = input_json.get('draw_request')
+        try:
+            draw_tracking_obj = DrawTracking.objects.get(loan_id=loan_id, draw_request=draw_request)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Draw tracking object not found'})
+
+        if draw_tracking_obj.draw_status in ['Pending', 'Rejected']:
+            draw_tracking_obj.draw_status = 'In Review'
+            draw_tracking_obj.save()
+            return Response({"Response":"Draw successfully submitted"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error':'draw can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
+
+    def put(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        draw_tracking_id = input_json.get('draw_tracking_id')
+
+        try:
+            my_instance = DrawTracking.objects.get(pk=draw_tracking_id)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+        update_status = None
+        if profile.role_type == "inspector" and my_instance.draw_status == "In Review":
+            if status_action == "Approve":
+                update_status = "In Approval"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+
+        elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
+            if status_action == "Approve":
+                update_status = "Approved"
+            elif status_action == "Reject":
+                update_status = "Rejected"
+        if update_status:
+            my_instance.draw_status = update_status
+            my_instance.save()
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
