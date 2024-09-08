@@ -8,5 +8,6 @@ urlpatterns = [
     path("api/", include("users.urls")),
     path("api/", include("construction.urls")),
     path("api/", include("doc_summary_qna.urls")),
-    path("api/", include("document_management.urls"))
+    path("api/", include("document_management.urls")),
+    path("api/", include("alerts.urls"))
 ]
