@@ -387,8 +387,8 @@ class CreateRetrieveUpdateLoan(APIView):
             user = request.user
             inspector = loan.inspector
             lender = loan.lender
-            create_notification(inspector, "Loan Application", f"{user.username} has applied for a loan.", 'AL')
-            create_notification(lender, "Loan Application", f"{user.username} has applied for a loan.", 'AL')            
+            create_notification(inspector, user,"Loan Application", f"{user.username} has applied for a loan.", 'AL')
+            create_notification(lender, user,"Loan Application", f"{user.username} has applied for a loan.", 'AL')            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
