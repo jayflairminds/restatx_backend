@@ -623,20 +623,56 @@ class CreateUpdateDrawRequest(APIView):
                 id = input_json.get('id')
                 try:
                     my_instance = DrawRequest.objects.get(pk=id)
-                except Loan.DoesNotExist:
+                except DrawRequest.DoesNotExist:
                     return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)        
                 user = request.user
                 profile = UserProfile.objects.get(user=user)
+                draw_request = my_instance.draw_request
+                budget_master_id = my_instance.budget_master_id
+                try:
+                    loan_id = BudgetMaster.objects.get(pk=budget_master_id).loan_id
+                except BudgetMaster.DoesNotExist:
+                    return Response({'error': 'BudgetMaster not found'}, status=status.HTTP_404_NOT_FOUND)
+
+                lis_budget_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id',flat=True)
+                try:
+                    draw_tracking_obj = DrawTracking.objects.get(draw_request=draw_request, loan_id=loan_id)
+                except DrawTracking.DoesNotExist:
+                    return Response({'error': 'DrawTracking not found'}, status=status.HTTP_404_NOT_FOUND)
+
+         
+                totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
+                draw_request=draw_request
+                ).aggregate(
+                    total_funded_amount=Sum('funded_amount'),
+                    total_draw_amount=Sum('draw_amount')
+                )
 
                 if profile.role_type == "borrower":
                     my_instance.draw_amount=input_json.get('draw_amount')
                     my_instance.description=input_json.get('description')
                     my_instance.save()
+                    totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
+                    draw_request=draw_request
+                    ).aggregate(
+                        total_funded_amount=Sum('funded_amount'),
+                        total_draw_amount=Sum('draw_amount')
+                    )
+                    draw_tracking_obj.total_draw_amount = totals['total_draw_amount']
+                    draw_tracking_obj.save()
                     return Response({"Response":"Fields Updated"},status=status.HTTP_200_OK)
 
                 elif profile.role_type == "lender":
                     my_instance.funded_amount = input_json.get('funded_amount')
                     my_instance.save()
+                    totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
+                    draw_request=draw_request
+                    ).aggregate(
+                        total_funded_amount=Sum('funded_amount'),
+                        total_draw_amount=Sum('draw_amount')
+                    )
+                    draw_tracking_obj.total_funded_amount = totals['total_funded_amount']
+                    draw_tracking_obj.save()
                     return Response({"Response":"Funded Amount Updated"},status=status.HTTP_200_OK)
 
                 else:
