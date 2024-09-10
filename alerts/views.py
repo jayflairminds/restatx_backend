@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
+from .serializers import *
 
 
 
@@ -20,20 +21,21 @@ def create_notification(notify_to,sender, title, message, notification_type='IN'
     )
     return notification
 
-class CreateNotification(APIView):
+class NotificationManager(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self,request):
-        input_json = request.data
-        title = input_json.get("title")
-        message = input_json.get("message")
-        notification_type = input_json.get("notification_type")
-
-        user = request.user
-        notification = Notification.objects.create(
-            user=user,
-            title=title,
-            message=message,
-            notification_type=notification_type,
-        )
-        return Response({"Response":notification},status= status.HTTP_200_OK)
+    def get(self,request):
+        input_params = request.query_params
+        user = request.user.id
+        try:
+            notifications = Notification.objects.filter(notify_to=user,is_read=False)
+        except Notification.DoesNotExist:
+            return Response({"Response":"No Active Notifications exist for the user"},status=status.HTTP_404_NOT_FOUND)
+        serializers = NotificationSerializer(notifications,many=True)
+        return Response(serializers.data,status= status.HTTP_200_OK)
+    
+    # def delete():
+    #     pass
+    
+    # def post():
+    #     pass
