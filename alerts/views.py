@@ -37,5 +37,14 @@ class NotificationManager(APIView):
     # def delete():
     #     pass
     
-    # def post():
-    #     pass
+    def post(self,request):
+        input_json = request.data
+        notification_id = input_json['notification_id']
+        try:
+            notification_instance = Notification.objects.get(pk=notification_id)
+        except Notification.DoesNotExist:
+            return Response({'Response':'Specified Notification does not exist'},status=status.HTTP_404_NOT_FOUND)
+        
+        notification_instance.is_read = True
+        notification_instance.save()
+        return Response({'Response':'Notification has been Read'},status=status.HTTP_200_OK)
