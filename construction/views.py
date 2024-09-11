@@ -525,7 +525,7 @@ class LoanApprovalStatus(APIView):
         try:
             my_instance = Loan.objects.get(pk=loan_id)
         except Loan.DoesNotExist:
-            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Loan not found'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
         profile = UserProfile.objects.get(user=user)
@@ -534,7 +534,6 @@ class LoanApprovalStatus(APIView):
         if profile.role_type == "inspector" and my_instance.status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
-                print(my_instance.borrower,my_instance.inspector)
                 create_notification(my_instance.borrower, request.user,"Loan Application", f"{request.user.username} has submitted the loan for approval to the lender.", 'IN')
                 create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
             elif status_action == "Reject":
@@ -751,13 +750,22 @@ class DrawTrackingStatus(APIView):
         loan_id = input_json.get('loan_id')
         draw_request = input_json.get('draw_request')
         try:
+            loan_obj = Loan.objects.get(pk=loan_id)
+        except Loan.DoesNotExist:
+            return Response({'Response':'Loan does not exist'})
+        
+        try:
             draw_tracking_obj = DrawTracking.objects.get(loan_id=loan_id, draw_request=draw_request)
         except DrawTracking.DoesNotExist:
             return Response({'error': 'Draw tracking object not found'})
 
+        
         if draw_tracking_obj.draw_status in ['Pending', 'Rejected']:
             draw_tracking_obj.draw_status = 'In Review'
             draw_tracking_obj.save()
+            create_notification(loan_obj.inspector, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.", 'AL')
+            create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.", 'AL')  
+
             return Response({"Response":"Draw successfully submitted"},status=status.HTTP_200_OK)
         else:
             return Response({'error':'draw can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
@@ -770,7 +778,8 @@ class DrawTrackingStatus(APIView):
         try:
             my_instance = DrawTracking.objects.get(pk=draw_tracking_id)
         except DrawTracking.DoesNotExist:
-            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'DrawTracking not found'}, status=status.HTTP_404_NOT_FOUND)
+        loan_obj = Loan.objects.get(pk=my_instance.loan_id)
 
         user = request.user
         profile = UserProfile.objects.get(user=user)
@@ -778,14 +787,22 @@ class DrawTrackingStatus(APIView):
         if profile.role_type == "inspector" and my_instance.draw_status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"{request.user.username} has submitted the draw for approval to the lender.", 'IN')
+                create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
+
             elif status_action == "Reject":
                 update_status = "Rejected"
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.id} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.id} has been Approved.", 'SU')
+
             elif status_action == "Reject":
                 update_status = "Rejected"
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.id} has been rejected by lender.", 'WA')
+
         if update_status:
             my_instance.draw_status = update_status
             my_instance.save()
