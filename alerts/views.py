@@ -67,4 +67,4 @@ class NotificationManager(APIView):
         
         notification_instance.is_read = True
         notification_instance.save()
-        return Response({'Response':'Notification has been Read'},status=status.HTTP_200_OK)
+        return Response({'Response':'Notification has been Marked-As-Read'},status=status.HTTP_200_OK)

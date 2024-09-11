@@ -389,8 +389,8 @@ class CreateRetrieveUpdateLoan(APIView):
             user = request.user
             inspector = loan.inspector
             lender = loan.lender
-            create_notification(inspector, user,"Loan Application", f"{user.username} has applied for a loan.", 'AL')
-            create_notification(lender, user,"Loan Application", f"{user.username} has applied for a loan.", 'AL')            
+            create_notification(inspector, user,"Loan Application", f"{user.username} has created a loan.", 'AL')
+            create_notification(lender, user,"Loan Application", f"{user.username} has created a loan.", 'AL')            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -511,6 +511,8 @@ class LoanApprovalStatus(APIView):
         if loan_obj.status == 'Pending' or loan_obj.status == 'Rejected':
             loan_obj.status = 'In Review'
             loan_obj.save()
+            create_notification(loan_obj.inspector, request.user,"Loan Application", f"{request.user.username} has applied for a loan.", 'AL')
+            create_notification(loan_obj.lender, request.user,"Loan Application", f"{request.user.username} has applied for a loan.", 'AL')  
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error':'loan can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
@@ -532,14 +534,22 @@ class LoanApprovalStatus(APIView):
         if profile.role_type == "inspector" and my_instance.status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
+                print(my_instance.borrower,my_instance.inspector)
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"{request.user.username} has submitted the loan for approval to the lender.", 'IN')
+                create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
             elif status_action == "Reject":
                 update_status = "Rejected"
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.id} has been Approved.", 'SU')
+
             elif status_action == "Reject":
                 update_status = "Rejected"
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected by the Lender", 'WA')
+
         if update_status:
             my_instance.status = update_status
             my_instance.save()
@@ -626,7 +636,7 @@ class CreateUpdateDrawRequest(APIView):
                 try:
                     my_instance = DrawRequest.objects.get(pk=id)
                 except DrawRequest.DoesNotExist:
-                    return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)        
+                    return Response({'error': 'DrawRequest not found'}, status=status.HTTP_404_NOT_FOUND)        
                 user = request.user
                 profile = UserProfile.objects.get(user=user)
                 draw_request = my_instance.draw_request
