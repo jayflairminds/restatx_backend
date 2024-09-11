@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     "construction",
     "corsheaders",
     "doc_summary_qna",
-    "document_management"
+    "document_management",
+    "alerts"
 ]
 
 MIDDLEWARE = [

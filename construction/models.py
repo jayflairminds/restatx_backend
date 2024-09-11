@@ -142,7 +142,7 @@ class BudgetMaster(models.Model):
     uses_type = models.CharField(null=True,blank=True)
 
     def __str__(self):
-        return self.id
+        return f"BudgetMaster ID {self.id}"
     
 class DrawTracking(models.Model):
     id = models.AutoField(primary_key=True)

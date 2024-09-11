@@ -9,7 +9,7 @@ class DocumentType(models.Model):
  
 class DocumentDetail(models.Model):
     id = models.AutoField(primary_key=True)
-    name = models.CharField(max_length=500,null=True)
+    name = models.CharField(max_length=800,null=True)
     type = models.CharField(max_length=150,null=True)
     document_type = models.ForeignKey(DocumentType,on_delete=models.CASCADE,null=True)
  
