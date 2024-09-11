@@ -23,6 +23,7 @@ from io import BytesIO
 import base64
 from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
+from alerts.views import create_notification
 
 client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
 db = client[settings.MONGODB['NAME']]
@@ -49,10 +50,13 @@ class DocumentManagement(APIView):
             ).first()
 
             if existing_instance:
+                loan_obj = Loan.objects.get(pk=existing_instance.loan_id)
                 existing_file_id = ObjectId(existing_instance.file_id)
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'In Review'
+                create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.", 'AL')
+                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.", 'AL')  
                 existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
@@ -149,6 +153,8 @@ class DocumentStatus(APIView):
         except Document.DoesNotExist:
             return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
 
+        loan_obj = Loan.objects.get(pk=my_instance.loan_id)
+        document_detail_obj = DocumentDetail.objects.get(pk=my_instance.document_detail)
         user = request.user
         profile = UserProfile.objects.get(user=user)
 
@@ -157,17 +163,25 @@ class DocumentStatus(APIView):
             if status_action == "Approve":
                 update_status = "Pending Lender"
                 my_instance.document_comment = comment
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{request.user.username} has submitted the {document_detail_obj.name} document for approval to the lender.", 'IN')
+                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has done the verified the {document_detail_obj.name} document and sent for approval to you.", 'AL')  
+
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been rejected.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
             if status_action == "Approve":
                 update_status = "Approved"
                 my_instance.document_comment = comment
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been Approved.", 'SU')
+
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been rejected by lender.", 'WA')
+
         if update_status:
             my_instance.status = update_status
             my_instance.save(update_fields=['status', 'document_comment'] if 'document_comment' in input_json else ['status'])
