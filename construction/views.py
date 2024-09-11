@@ -525,7 +525,7 @@ class LoanApprovalStatus(APIView):
         try:
             my_instance = Loan.objects.get(pk=loan_id)
         except Loan.DoesNotExist:
-            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Loan not found'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
         profile = UserProfile.objects.get(user=user)
@@ -770,7 +770,7 @@ class DrawTrackingStatus(APIView):
         try:
             my_instance = DrawTracking.objects.get(pk=draw_tracking_id)
         except DrawTracking.DoesNotExist:
-            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'DrawTracking not found'}, status=status.HTTP_404_NOT_FOUND)
 
         user = request.user
         profile = UserProfile.objects.get(user=user)
