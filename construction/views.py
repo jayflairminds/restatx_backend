@@ -534,7 +534,6 @@ class LoanApprovalStatus(APIView):
         if profile.role_type == "inspector" and my_instance.status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
-                print(my_instance.borrower,my_instance.inspector)
                 create_notification(my_instance.borrower, request.user,"Loan Application", f"{request.user.username} has submitted the loan for approval to the lender.", 'IN')
                 create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
             elif status_action == "Reject":
