@@ -16,7 +16,7 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-
+from construction.helper_functions import disbursement_schedule
 
 
 class LoanListView(generics.ListAPIView):
@@ -204,8 +204,19 @@ class Budget(APIView):
             budget = BudgetMaster.objects.get(pk=id)
         except BudgetMaster.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        input_json = request.data
+        if 'original_loan_budget' in input_json.keys():
+            input_json['revised_budget'] =  input_json['original_loan_budget'] + budget.adjustments   
+            input_json['loan_budget'] = input_json['revised_budget'] - budget.equity_budget
         
-        serializer = BudgetMasterSerializer(budget, data=request.data, partial=True)
+        if 'adjustments' in input_json.keys():
+            input_json['revised_budget'] =  budget.original_loan_budget  + input_json['adjustments'] 
+            input_json['loan_budget'] = input_json['revised_budget'] - budget.equity_budget     
+
+        if 'equity_budget' in input_json.keys():
+            input_json['loan_budget'] = budget.revised_budget - input_json['equity_budget']        
+
+        serializer = BudgetMasterSerializer(budget, data=input_json, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -223,7 +234,8 @@ class Budget(APIView):
                     loan_id=loan_id,
                     uses_type=uses_type
                 ).values(
-                    'id', 'loan_id', 'project_total', 'loan_budget',
+                    'id', 'loan_id', 'original_loan_budget','adjustments','revised_budget', 
+                    'equity_budget','loan_budget',
                     'acquisition_loan', 'building_loan', 'project_loan',
                     'mezzanine_loan', 'uses'
                 ).order_by('uses')
@@ -233,7 +245,10 @@ class Budget(APIView):
                     loan_id=loan_id,
                     uses_type=uses_type
                 ).aggregate(
-                    project_total_sum=Sum('project_total'),
+                    original_loan_budget_sum=Sum('original_loan_budget'),
+                    adjustments_sum=Sum('adjustments'),
+                    revised_budget_sum=Sum('revised_budget'),
+                    equity_budget_sum=Sum('equity_budget'),
                     loan_budget_sum=Sum('loan_budget'),
                     acquisition_loan_sum=Sum('acquisition_loan'),
                     building_loan_sum=Sum('building_loan'),
@@ -246,7 +261,10 @@ class Budget(APIView):
                 total_of_table = {
                     "uses": "Total",
                     "loan_id": loan_id,
-                    "project_total": totals['project_total_sum'] or 0,
+                    "original_loan_budget": totals['original_loan_budget_sum'] or 0,
+                    "adjustments": totals['adjustments_sum'] or 0,
+                    "revised_budget": totals['revised_budget_sum'] or 0,
+                    "equity_budget": totals['equity_budget_sum'] or 0,
                     "loan_budget": totals['loan_budget_sum'] or 0,
                     "acquisition_loan": totals['acquisition_loan_sum'] or 0,
                     "building_loan": totals['building_loan_sum'] or 0,
@@ -278,7 +296,10 @@ class BudgetSummary(APIView):
         try: 
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_project_total=Sum('project_total'),
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_original_loan_budget=Sum('original_loan_budget'),
+                                                                        total_adjustments= Sum('adjustments'),
+                                                                        total_revised_budget= Sum('revised_budget'),
+                                                                        total_equity_budget= Sum('equity_budget'),                           
                                                                         total_loan_budget= Sum('loan_budget'),
                                                                         total_acquisition_loan= Sum('acquisition_loan'),
                                                                         total_building_loan= Sum('building_loan'),
@@ -286,14 +307,20 @@ class BudgetSummary(APIView):
                                                                         total_project_loan = Sum('project_loan')).order_by('uses_type')
             
             totals = queryset.aggregate(
-                        project_total_sum=Sum('total_project_total'),
+                        original_loan_budget_sum=Sum('total_original_loan_budget'),
+                        adjustments_sum=Sum('total_adjustments'),
+                        revised_budget_sum=Sum('total_revised_budget'),
+                        equity_budget_sum=Sum('total_equity_budget'),
                         loan_budget_sum=Sum('total_loan_budget'),
                         acquisition_loan_sum=Sum('total_acquisition_loan'),
                         building_loan_sum=Sum('total_building_loan'),
                         mezzanine_loan_sum=Sum('total_mezzanine_loan'))
             total_output = {
                 "uses_type" : 'Total',
-                "total_project_total" : totals['project_total_sum'] or 0,
+                "total_original_loan_budget" : totals['original_loan_budget_sum'] or 0,
+                "total_adjustments" : totals['adjustments_sum'] or 0,
+                "total_revised_budget" : totals['revised_budget_sum'] or 0,
+                "total_equity_budget" : totals['equity_budget_sum'] or 0,
                 "total_loan_budget" : totals['loan_budget_sum'] or 0,
                 "total_acquisition_loan" : totals['acquisition_loan_sum'] or 0,
                 "total_building_loan" : totals['building_loan_sum'] or 0,
@@ -470,7 +497,7 @@ class InsertUsesforBudgetMaster(APIView):
                         uses=sub_uses,
                         uses_type=uses,
                         loan=loan,
-                        project_total = 0,
+                        original_loan_budget = 0,
                         loan_budget = 0,
                         acquisition_loan = 0,
                         building_loan=0,
@@ -675,14 +702,17 @@ class CreateUpdateDrawRequest(APIView):
 
                 elif profile.role_type == "lender":
                     my_instance.funded_amount = input_json.get('funded_amount')
+                    my_instance.released_amount = input_json.get('funded_amount') + DrawRequest.objects.filter(budget_master_id=my_instance.budget_master_id).aggregate(total_funded=Sum('funded_amount'))['total_funded']
                     my_instance.save()
                     totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
                     draw_request=draw_request
                     ).aggregate(
                         total_funded_amount=Sum('funded_amount'),
-                        total_draw_amount=Sum('draw_amount')
+                        total_draw_amount=Sum('draw_amount'),
+                        total_released_amount=Sum('released_amount')
                     )
                     draw_tracking_obj.total_funded_amount = totals['total_funded_amount']
+                    draw_tracking_obj.total_released_amount = totals['total_released_amount'] 
                     draw_tracking_obj.save()
                     return Response({"Response":"Funded Amount Updated"},status=status.HTTP_200_OK)
 
@@ -792,16 +822,16 @@ class DrawTrackingStatus(APIView):
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.id} has been rejected during inspection.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.loanid} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.id} has been Approved.", 'SU')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.id} has been rejected by lender.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.loanid} has been rejected by lender.", 'WA')
 
         if update_status:
             my_instance.draw_status = update_status
