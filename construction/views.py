@@ -702,14 +702,17 @@ class CreateUpdateDrawRequest(APIView):
 
                 elif profile.role_type == "lender":
                     my_instance.funded_amount = input_json.get('funded_amount')
+                    my_instance.released_amount = input_json.get('funded_amount') + DrawRequest.objects.filter(budget_master_id=my_instance.budget_master_id).aggregate(total_funded=Sum('funded_amount'))['total_funded']
                     my_instance.save()
                     totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
                     draw_request=draw_request
                     ).aggregate(
                         total_funded_amount=Sum('funded_amount'),
-                        total_draw_amount=Sum('draw_amount')
+                        total_draw_amount=Sum('draw_amount'),
+                        total_released_amount=Sum('released_amount')
                     )
                     draw_tracking_obj.total_funded_amount = totals['total_funded_amount']
+                    draw_tracking_obj.total_released_amount = totals['total_released_amount'] 
                     draw_tracking_obj.save()
                     return Response({"Response":"Funded Amount Updated"},status=status.HTTP_200_OK)
 
@@ -819,16 +822,16 @@ class DrawTrackingStatus(APIView):
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.id} has been rejected during inspection.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.loanid} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.id} has been Approved.", 'SU')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.id} has been rejected by lender.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.loanid} has been rejected by lender.", 'WA')
 
         if update_status:
             my_instance.draw_status = update_status
