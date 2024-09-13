@@ -154,7 +154,7 @@ class DocumentStatus(APIView):
             return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
 
         loan_obj = Loan.objects.get(pk=my_instance.loan_id)
-        document_detail_obj = DocumentDetail.objects.get(pk=my_instance.document_detail)
+        document_detail_obj = DocumentDetail.objects.get(pk=my_instance.document_detail_id)
         user = request.user
         profile = UserProfile.objects.get(user=user)
 
