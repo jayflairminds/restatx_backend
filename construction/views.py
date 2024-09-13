@@ -206,15 +206,15 @@ class Budget(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         input_json = request.data
         if 'original_loan_budget' in input_json.keys():
-            input_json['revised_budget'] =  input_json['original_loan_budget'] + budget.adjustments   
-            input_json['loan_budget'] = input_json['revised_budget'] - budget.equity_budget
+            input_json['revised_budget'] =  int(input_json['original_loan_budget']) + budget.adjustments   
+            input_json['loan_budget'] = int(input_json['revised_budget']) - budget.equity_budget
         
         if 'adjustments' in input_json.keys():
-            input_json['revised_budget'] =  budget.original_loan_budget  + input_json['adjustments'] 
-            input_json['loan_budget'] = input_json['revised_budget'] - budget.equity_budget     
+            input_json['revised_budget'] =  budget.original_loan_budget  + int(input_json['adjustments']) 
+            input_json['loan_budget'] = int(input_json['revised_budget']) - budget.equity_budget     
 
         if 'equity_budget' in input_json.keys():
-            input_json['loan_budget'] = budget.revised_budget - input_json['equity_budget']        
+            input_json['loan_budget'] = budget.revised_budget - int(input_json['equity_budget'])        
 
         serializer = BudgetMasterSerializer(budget, data=input_json, partial=True)
         if serializer.is_valid():
