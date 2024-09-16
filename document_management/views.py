@@ -169,18 +169,18 @@ class DocumentStatus(APIView):
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been rejected.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
             if status_action == "Approve":
                 update_status = "Approved"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been Approved.", 'SU')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.id} has been rejected by lender.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected by lender.", 'WA')
 
         if update_status:
             my_instance.status = update_status
