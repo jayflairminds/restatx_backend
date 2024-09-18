@@ -397,6 +397,7 @@ class CreateRetrieveUpdateLoan(APIView):
         project_type = Project.objects.get(pk=project_id).project_type
         input_json['loantype'] = project_type
         input_json['status'] = 'Pending'
+        input_json['start_date'] = input_json['start_date'] if input_json.get('start_date') is not None else timezone.now()
         input_json['borrower'] = self.request.user.id
         serializer = LoanSerializer(data = input_json)
         document_type_obj = DocumentType.objects.filter(project_type = project_type).values_list('id', flat=True)
@@ -565,16 +566,16 @@ class LoanApprovalStatus(APIView):
                 create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected during inspection.", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.id} has been Approved.", 'SU')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected by the Lender", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected by the Lender", 'WA')
 
         if update_status:
             my_instance.status = update_status
