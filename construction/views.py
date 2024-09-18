@@ -566,16 +566,16 @@ class LoanApprovalStatus(APIView):
                 create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected during inspection.", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected during inspection.", 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.id} has been Approved.", 'SU')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.id} has been rejected by the Lender", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected by the Lender", 'WA')
 
         if update_status:
             my_instance.status = update_status
