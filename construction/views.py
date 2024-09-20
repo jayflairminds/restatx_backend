@@ -398,6 +398,7 @@ class CreateRetrieveUpdateLoan(APIView):
         input_json['loantype'] = project_type
         input_json['status'] = 'Pending'
         input_json['start_date'] = input_json['start_date'] if input_json.get('start_date') is not None else timezone.now()
+        input_json['end_date'] = input_json['end_date'] if input_json.get('end_date') is not None else None
         input_json['borrower'] = self.request.user.id
         serializer = LoanSerializer(data = input_json)
         document_type_obj = DocumentType.objects.filter(project_type = project_type).values_list('id', flat=True)
