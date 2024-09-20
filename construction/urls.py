@@ -24,5 +24,6 @@ urlpatterns = [
     path("draw-request/",CreateUpdateDrawRequest.as_view(),name='draw-request'),
     path("list-draw-tracking/",DrawTrackingListView.as_view(),name='list-draw-tracking'),
     path("draw-tracking/<int:id>/",RetrieveDeleteUpdateDrawTracking.as_view(),name='draw-tracking'),
-    path("draw-approval/",DrawTrackingStatus.as_view(),name="draw-approval")
+    path("draw-approval/",DrawTrackingStatus.as_view(),name="draw-approval"),
+    path("upload-budget/",UploadBudget.as_view(),name='upload-budget')
 ]

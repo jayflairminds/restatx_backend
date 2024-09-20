@@ -28,7 +28,7 @@ class NotificationManager(APIView):
     def get(self,request):
         input_params = request.query_params
         page = input_params.get('page', 1)  
-        n_records = input_params.get('n_records', 5)  # Default records per page to 5 if not provided
+        n_records = input_params.get('n_records', 10)  # Default records per page to 5 if not provided
         user = request.user.id
         
         try:

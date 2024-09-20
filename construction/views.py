@@ -16,8 +16,8 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-from construction.helper_functions import disbursement_schedule
-
+from construction.helper_functions import disbursement_schedule 
+import pandas as pd
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
@@ -28,11 +28,11 @@ class LoanListView(generics.ListAPIView):
         profile = UserProfile.objects.get(user=user)
         match profile.role_type:
             case "lender":
-                loans = Loan.objects.filter(lender_id=user).order_by('loanid')
+                loans = Loan.objects.filter(lender_id=user).order_by('-loanid')
             case "inspector":
-                loans = Loan.objects.filter(inspector_id=user).order_by('loanid')
+                loans = Loan.objects.filter(inspector_id=user).order_by('-loanid')
             case "borrower":
-                loans = Loan.objects.filter(borrower_id=user).order_by('loanid')
+                loans = Loan.objects.filter(borrower_id=user).order_by('-loanid')
 
         loans = loans.select_related("project","lender", "borrower","inspector")
         return loans
@@ -385,7 +385,7 @@ class ProjectList(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
         id = user.id
-        project = Project.objects.filter(user = id).order_by('id')
+        project = Project.objects.filter(user = id).order_by('-id')
         return project
     
 class CreateRetrieveUpdateLoan(APIView):
@@ -398,6 +398,7 @@ class CreateRetrieveUpdateLoan(APIView):
         input_json['loantype'] = project_type
         input_json['status'] = 'Pending'
         input_json['start_date'] = input_json['start_date'] if input_json.get('start_date') is not None else timezone.now()
+        input_json['end_date'] = input_json['end_date'] if input_json.get('end_date') is not None else None
         input_json['borrower'] = self.request.user.id
         serializer = LoanSerializer(data = input_json)
         document_type_obj = DocumentType.objects.filter(project_type = project_type).values_list('id', flat=True)
@@ -840,3 +841,59 @@ class DrawTrackingStatus(APIView):
             return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
+
+class UploadBudget(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def post(self,request):
+        serializer = BudgetMasterSerializer(data=request.data)
+        loan_id = request.data.get('loan_id')
+        file = request.FILES.get('file')
+
+        if not loan_id:
+            return Response({'error': 'Loan ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        
+        if not file:
+             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            loan = Loan.objects.get(loanid=loan_id)
+        except Loan.DoesNotExist:
+            return Response({'error': 'Loan with this ID does not exist'}, status=status.HTTP_400_BAD_REQUEST) 
+        
+        try:
+            df = pd.read_excel(file)
+        except Exception as e:
+            return Response({'error': f'Failed to read Excel file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST) 
+        
+        for column in ['original loan budget','adjustments','equity budget']:
+            if column not in df.columns:
+                return Response({'response':f"{column} not present"},status=status.HTTP_404_NOT_FOUND)
+       
+        if 'revised budget' not in df.columns:
+            df['revised budget'] = df['original loan budget'] + df['adjustments']  
+        if 'loan budget' not in df.columns:
+            df['loan budget'] = df['original loan budget'] + df['adjustments']- df['equity budget'] 
+        
+        budget_instances = []
+
+        for index, row in df.iterrows():
+            budget_instance = BudgetMaster(
+                loan=loan, 
+                uses=row.get('uses'),
+                uses_type=row.get('uses type'),
+                original_loan_budget=row.get('original loan budget'),
+                adjustments=row.get('adjustments'),
+                equity_budget=row.get('equity budget'),
+                revised_budget=row.get('revised budget'),
+                loan_budget = row.get('loan budget')
+            )
+            budget_instances.append(budget_instance)
+        try:
+            BudgetMaster.objects.bulk_create(budget_instances)
+            
+        except Exception as e:
+            return Response({'error': f'Failed to save data: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)  
+        
+        return Response({'message': 'Data uploaded and saved successfully'}, status=status.HTTP_201_CREATED)
