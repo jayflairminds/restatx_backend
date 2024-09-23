@@ -24,7 +24,7 @@ class ResponseView(APIView):
             user_question = request.data.get("user_question")
             predefined_question = request.data.get("predefined_question")
             if predefined_question:
-                user_question = predefined_prompts()
+                user_question = predefined_prompts(predefined_question)
             response = user_input(user_question)
             return Response({"response":response},status=200)
         except Exception as e:
