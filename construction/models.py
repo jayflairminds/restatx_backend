@@ -31,9 +31,9 @@ class Loan(models.Model):
     borrower = models.ForeignKey(
         User, related_name="borrower", on_delete=models.CASCADE
     )
-    lender = models.ForeignKey(User, related_name="lender", on_delete=models.CASCADE)
+    lender = models.ForeignKey(User, related_name="lender", on_delete=models.SET_NULL, null = True)
     inspector = models.ForeignKey(
-        User, related_name="inspector", on_delete=models.CASCADE
+        User, related_name="inspector", on_delete=models.SET_NULL, null = True
     )
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     loandescription = models.CharField(max_length=200)

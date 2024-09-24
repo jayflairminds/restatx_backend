@@ -9,5 +9,7 @@ urlpatterns = [
     path("user/", GetUserView.as_view(), name="get_user"),
     path("logout/", knox_views.LogoutView.as_view(), name="knox_logout"),
     path("logoutall/", knox_views.LogoutAllView.as_view(), name="knox_logoutall"),
-    path("list-users/",UserList.as_view(),name="list-user-on-roletype")
+    path("list-users/",UserList.as_view(),name="list-user-on-roletype"),
+    path("change-password/",PasswordChange.as_view(),name="change-password"),
+    path("delete-user/<int:id>",DeleteUser.as_view(),name="delete-user")
 ]
