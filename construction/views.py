@@ -393,8 +393,11 @@ class CreateRetrieveUpdateLoan(APIView):
 
     def post(self,request):
         input_json = request.data
-        project_id = request.data.get('project')        
-        project_type = Project.objects.get(pk=project_id).project_type
+        project_id = request.data.get('project')   
+        try:
+            project_type = Project.objects.get(pk=project_id).project_type
+        except Project.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         input_json['loantype'] = project_type
         input_json['status'] = 'Pending'
         input_json['start_date'] = input_json['start_date'] if input_json.get('start_date') is not None else timezone.now()
