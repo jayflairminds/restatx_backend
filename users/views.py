@@ -61,7 +61,7 @@ class GetUserView(APIView):
             return Response({"Output": "User profile not found"}, status=400)
 
 class UserList(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser,IsAuthenticated]
     serializer_class = UserProfileSerializer
 
     def get_queryset(self):
