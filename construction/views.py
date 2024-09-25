@@ -191,7 +191,7 @@ class Budget(APIView):
 
     def post(self,request):
         data = request.data
-        print(data)
+        
         data['loan'] = data['loan_id'] 
         serializer = BudgetMasterSerializer(data=request.data)
         if serializer.is_valid():

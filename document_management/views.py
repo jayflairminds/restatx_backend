@@ -44,7 +44,7 @@ class DocumentManagement(APIView):
             document_detail= DocumentDetail.objects.get(
                 id=input_json['document_detail_id']
             )
-            print(document_detail)
+            
             existing_instance = Document.objects.filter(
                 Q(document_detail=document_detail) & Q(loan_id=request.data['loan'])
             ).first()
