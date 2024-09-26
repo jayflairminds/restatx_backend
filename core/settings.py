@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "doc_summary_qna",
     "document_management",
-    "alerts"
+    "alerts",
+    "user_payments"
 ]
 
 MIDDLEWARE = [
@@ -117,6 +118,10 @@ DATABASES = {
         "HOST": os.getenv("DATABASE_HOST")
     }
 }
+
+STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+WEBHOOK_SIGNING_SECRET = os.getenv("WEBHOOK_SIGNING_SECRET")
 
 # MONGODB = {
 #     'URI': f"mongodb+srv://{os.getenv('MONGODB_USERNAME')}:{os.getenv('MONGODB_PASSWORD')}@cluster0.jfno3.mongodb.net/",
