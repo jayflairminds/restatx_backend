@@ -10,5 +10,5 @@ urlpatterns = [
     path("api/", include("doc_summary_qna.urls")),
     path("api/", include("document_management.urls")),
     path("api/", include("alerts.urls")),
-    path("payments/",include("user_payments.urls"))
+    path("api/",include("user_payments.urls"))
 ]

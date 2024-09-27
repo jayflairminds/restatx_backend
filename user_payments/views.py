@@ -74,13 +74,20 @@ class CreatePaymentIntent(APIView):
 
     def post(self,request):
         try:
-            data = request.data
+            input_json = request.data
+            payment_method_id = input_json.get('payment_method_id')
+        
             payment_intent = stripe.PaymentIntent.create(
                 amount=1000,
                 currency='usd',
-                payment_method=data['payment_method_id'],
-                confirmation_method='manual',
+                # payment_method=payment_method_id,
+                payment_method='pm_card_visa',
+                # confirmation_method='manual',
                 confirm=True,
+                automatic_payment_methods={
+                    'enabled': True,
+                    'allow_redirects': 'never'  # This will disable redirects
+                }
             )
             return Response(payment_intent)
         except Exception as e:
@@ -91,4 +98,14 @@ class ProductList(APIView):
 
     def get(self,request):
         response = stripe.Product.list()
+        return Response(response,status=status.HTTP_200_OK)
+
+class PricesList(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        input_params = request.query_params
+        limit = input_params.get('limit')
+        product = input_params.get('product')
+        response = stripe.Price.list(limit=limit,product=product)
         return Response(response,status=status.HTTP_200_OK)
