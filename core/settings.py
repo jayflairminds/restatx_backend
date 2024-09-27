@@ -181,3 +181,21 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("knox.auth.TokenAuthentication",),
     'COERCE_DECIMAL_TO_STRING': False
 }
+
+EMAIL_CONFIG = {
+    'BACKEND': os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend'),
+    'HOST': os.getenv('EMAIL_HOST', 'smtp.gmail.com'),
+    'PORT': int(os.getenv('EMAIL_PORT')),
+    'USE_TLS': os.getenv('EMAIL_USE_TLS'),
+    'HOST_USER': os.getenv('EMAIL_HOST_USER'),
+    'HOST_PASSWORD': os.getenv('EMAIL_HOST_PASSWORD'),
+    'DEFAULT_FROM_EMAIL': os.getenv('DEFAULT_FROM_EMAIL'),
+}
+
+EMAIL_BACKEND = EMAIL_CONFIG['BACKEND']
+EMAIL_HOST = EMAIL_CONFIG['HOST'] # Gmail SMTP server
+EMAIL_PORT = EMAIL_CONFIG['PORT'] # Port for TLS
+EMAIL_USE_TLS = EMAIL_CONFIG['USE_TLS'] # Use TLS for secure connection
+EMAIL_HOST_USER = EMAIL_CONFIG['HOST_USER'] # Your Gmail address
+EMAIL_HOST_PASSWORD = EMAIL_CONFIG['HOST_PASSWORD'] # Your Gmail password or app password
+DEFAULT_FROM_EMAIL = EMAIL_CONFIG['DEFAULT_FROM_EMAIL'] # The default 'From' email address
