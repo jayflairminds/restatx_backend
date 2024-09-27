@@ -597,7 +597,7 @@ class CreateUpdateDrawRequest(APIView):
         try:
             input_json = request.data
             loan_id = input_json.get("loan_id")
-            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','loan_budget')
+            budget_master_obj = BudgetMaster.objects.filter(loan_id=loan_id).order_by('uses_type','uses').values_list('id','loan_budget')
             created_data = []
             lis_budget_ids = [i[0] for i in budget_master_obj ]
             draw_req_obj = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids))
@@ -623,8 +623,8 @@ class CreateUpdateDrawRequest(APIView):
                 draw_request = val[0] +1
                 for obj in budget_master_obj:
                     budget_amount = obj[1]  
-                    released_amount_previes = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
-                    released_amount_list = list(released_amount_previes)
+                    released_amount_previous = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
+                    released_amount_list = list(released_amount_previous)
                     released_amount=released_amount_list[0]
                     new_instance = DrawRequest(
                         budget_master_id=obj[0],
@@ -707,18 +707,7 @@ class CreateUpdateDrawRequest(APIView):
 
                 elif profile.role_type == "lender":
                     my_instance.funded_amount = input_json.get('funded_amount')
-                    my_instance.released_amount = input_json.get('funded_amount') + DrawRequest.objects.filter(budget_master_id=my_instance.budget_master_id).aggregate(total_funded=Sum('funded_amount'))['total_funded']
                     my_instance.save()
-                    totals = DrawRequest.objects.filter(budget_master_id__in = list(lis_budget_ids),
-                    draw_request=draw_request
-                    ).aggregate(
-                        total_funded_amount=Sum('funded_amount'),
-                        total_draw_amount=Sum('draw_amount'),
-                        total_released_amount=Sum('released_amount')
-                    )
-                    draw_tracking_obj.total_funded_amount = totals['total_funded_amount']
-                    draw_tracking_obj.total_released_amount = totals['total_released_amount'] 
-                    draw_tracking_obj.save()
                     return Response({"Response":"Funded Amount Updated"},status=status.HTTP_200_OK)
 
                 else:
@@ -832,6 +821,38 @@ class DrawTrackingStatus(APIView):
         elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
+                budget_master_id_lis = BudgetMaster.objects.filter(loan_id=my_instance.loan_id).values_list('id',flat=True)
+                draw_request_instance = DrawRequest.objects.filter(draw_request = my_instance.draw_request, budget_master_id__in = list(budget_master_id_lis))
+                
+                total_funded = draw_request_instance.aggregate(total_funded=Sum('funded_amount'))['total_funded'] or 0
+                
+                my_instance.total_funded_amount = total_funded
+
+                # Loop through each line item and calculate released amount per line item
+                for line_item in draw_request_instance:
+                    # Fetch previous draws for the same line item using lte
+                    previous_draws = DrawRequest.objects.filter(
+                        draw_request__lte=my_instance.draw_request,  # Fetch previous draws less than or equal to the current one
+                        budget_master_id=line_item.budget_master_id  # For the same budget line item
+                    )
+                    
+                    line_item.released_amount = previous_draws.aggregate(total_funded=Sum('funded_amount'))['total_funded'] or 0
+                    line_item.save()
+            
+
+                previous_and_current_draws = DrawRequest.objects.filter(
+                     draw_request__lte=my_instance.draw_request,  # Fetch draw requests less than or equal to the current one
+                     budget_master_id__in=list(budget_master_id_lis)  # Filter by the budget masters related to this loan
+                )
+                
+                # Calculate the total funded amount for previous and current draws
+                previous_and_current_funded_total = previous_and_current_draws.aggregate(
+                    total_funded=Sum('funded_amount')
+                )['total_funded'] or 0 
+
+                # Assign the total released amount (which includes previous draws)
+                my_instance.total_released_amount = previous_and_current_funded_total
+               
                 create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.loanid} has been Approved.", 'SU')
 
             elif status_action == "Reject":

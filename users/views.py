@@ -67,7 +67,7 @@ class GetUserView(APIView):
             return Response({"Output": "User profile not found"}, status=400)
 
 class UserList(generics.ListAPIView):
-    permission_classes = [IsAdminUser,IsAuthenticated]
+    permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer
 
     def get_queryset(self):
@@ -110,29 +110,32 @@ class DeleteUser(APIView):
         
         try:
             user = User.objects.get(id=id)
+            if request.user.id == id:
+                return Response({"Response":"You cannot delete yourself."},status=status.HTTP_401_UNAUTHORIZED)
             user.delete()
-            return Response({"message": f"User '{user.username}' deleted successfully."}, status=status.HTTP_200_OK) 
+            return Response({"message": f"  User '{user.username}' deleted successfully."}, status=status.HTTP_200_OK) 
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
 
 class PasswordResetRequest(APIView):
 
     def post(self,request):
-        email = request.data.get('email') 
+        username = request.data.get('username') 
 
-        if not email:
-            return Response({"error":"Email is required"},status=status.HTTP_400_BAD_REQUEST) 
+        if not username:
+            return Response({"error":"username is required"},status=status.HTTP_400_BAD_REQUEST) 
         
         try:
-            user = User.objects.get(email=email)
+            user = User.objects.get(username=username)
         except User.DoesNotExist:
             return Response({"error": "User with this email does not exist"}, status=status.HTTP_404_NOT_FOUND)
 
          # Generate reset token and link
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
-        reset_link = f"{request.scheme}://{request.get_host()}/reset-password/{uid}/{token}/"
+        host = request.get_host()
+        # host = 'localhost:5173'
+        reset_link = f"{request.scheme}://{host}/reset-password/{uid}/{token}/"
         
         # Send the reset link to the user's email
 
@@ -140,10 +143,10 @@ class PasswordResetRequest(APIView):
             subject="Password Reset Request",
             message=f"Click the link below to reset your password:\n{reset_link}",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
+            recipient_list=[user.email],
         )
 
-        return Response({"message": "Password reset link sent"}, status=status.HTTP_200_OK) 
+        return Response({"message": "Password reset link sent","Email":user.email}, status=status.HTTP_200_OK) 
     
 class PasswordResetConfirm(APIView):
 
