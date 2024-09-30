@@ -28,7 +28,7 @@ def create_output_json(months,scaled_s_curve_values):
         print(i,j)
         output_dictionary = {
             "theoretical": j,
-            "month":i
+            "review_month":i
         }
         output_lis.append(output_dictionary)
     return output_lis
