@@ -97,8 +97,14 @@ class ProductList(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
-        response = stripe.Product.list()
-        return Response(response,status=status.HTTP_200_OK)
+        product_list = stripe.Product.list()
+        price_list = stripe.Price.list()
+        for product in product_list:
+            for price in price_list:
+                if product['id'] == price['product']:
+                    product["unit_amount"] = price['unit_amount']
+                    product['currency'] = price['currency']
+        return Response(product_list,status=status.HTTP_200_OK)
 
 class PricesList(APIView):
     permission_classes = [IsAuthenticated]
