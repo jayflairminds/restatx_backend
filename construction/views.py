@@ -178,6 +178,7 @@ class DashboardGraph(APIView):
                 print(disbursement_schedule(loan_id))
                 queryset = DisbursementSchedule.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = DisbursementScheduleSerializer(queryset, many=True)
+                return Response(disbursement_schedule(loan_id))
             case 'construction_status_graph':
                 queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ConstructionStatusSerializer(queryset, many=True)
@@ -397,6 +398,8 @@ class CreateRetrieveUpdateLoan(APIView):
         project_id = request.data.get('project')   
         try:
             project_type = Project.objects.get(pk=project_id).project_type
+            if Loan.objects.filter(project_id=project_id).exists():
+                return Response({"detail": "This project is already associated with a loan."}, status=status.HTTP_409_CONFLICT)
         except Project.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         input_json['loantype'] = project_type
@@ -409,6 +412,7 @@ class CreateRetrieveUpdateLoan(APIView):
         
         if serializer.is_valid():
             loan = serializer.save()
+
             document_details = DocumentDetail.objects.filter(document_type_id__in = list(document_type_obj))
             document_details_list = list()
             for detail in document_details:
@@ -622,10 +626,15 @@ class CreateUpdateDrawRequest(APIView):
             else:
                 val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
                 draw_request = val[0] +1
+                print("budget_master_obj",budget_master_obj)
                 for obj in budget_master_obj:
+                    print("budget amount",obj[1])
                     budget_amount = obj[1]  
                     released_amount_previous = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
+                    print(released_amount_previous)
                     released_amount_list = list(released_amount_previous)
+                    print(released_amount_list)
+
                     released_amount=released_amount_list[0]
                     new_instance = DrawRequest(
                         budget_master_id=obj[0],
@@ -732,11 +741,12 @@ class CreateUpdateDrawRequest(APIView):
             draw_request_obj = DrawRequest.objects.filter(
                 budget_master_id__in= budget_master_id,
                 draw_request = draw_request
-            )
+            ).order_by('budget_master__uses_type','budget_master__uses')
+            
         else:
             draw_request_obj = DrawRequest.objects.filter(
                 budget_master_id__in= budget_master_id
-            )
+            ).order_by('budget_master__uses_type','budget_master__uses')
         serializers = DrawRequestSerializer(draw_request_obj,many=True)
         return Response(serializers.data, status=status.HTTP_200_OK)
     
