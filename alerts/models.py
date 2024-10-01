@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from construction.models import *
 from django.utils import timezone
 
 class Notification(models.Model):
@@ -23,6 +24,7 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
     link = models.URLField(null=True, blank=True)
+    loan = models.ForeignKey(Loan, on_delete=models.CASCADE,null=True)
 
     class Meta:
         ordering = ['-created_at']
