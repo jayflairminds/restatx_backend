@@ -943,3 +943,29 @@ class UploadBudget(APIView):
             return Response({'error': f'Failed to save data: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)  
         
         return Response({'message': 'Data uploaded and saved successfully'}, status=status.HTTP_201_CREATED)
+    
+class RetrieveSpentToDate(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def get(self,request):
+        input_params = request.query_params
+
+        loan_id = input_params.get('loan_id')
+        if not loan_id:
+            return Response({'error':'loan id is required'},status=400)
+        
+        if not Loan.objects.filter(loanid=loan_id).exists():
+            return Response({"error":"loanid does not exist"},status=400)
+        
+        try:
+            draws = DrawTracking.objects.filter(loan_id=loan_id) 
+            if draws:
+                spent_to_date = draws.aggregate(total_spent=Sum('total_funded_amount'))['total_spent'] or 0
+                return Response({"spent_to_date":spent_to_date, 'message': 'Success'},status=200)
+            else:
+                 return Response({ 'spent_to_date': 0,'message': f'No draws found for loan_id {loan_id}'}, status=404)
+            
+        except Exception as e:
+            return Response({"error":str(e)},status=500)
+                
+        

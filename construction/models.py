@@ -157,7 +157,7 @@ class DrawTracking(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE,null=True)
     total_released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     total_budget_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
-    total_funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True,default=0)
     total_balance_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     total_draw_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     requested_date = models.DateTimeField(null=True, blank=True)
