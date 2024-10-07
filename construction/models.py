@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import User
+from django.db.models import Sum
 
 PROJECT_TYPE_CHOICES = [("residential", "Residential"), ("commercial", "Commercial")]
 
@@ -165,6 +166,32 @@ class DrawTracking(models.Model):
 
     def __str__(self):
         return f"Draw Tracking ID {self.id}"
+
+    def save(self, *args, **kwargs):
+        # Call the original save method
+        super().save(*args, **kwargs)
+        # Update the remaining_to_fund in the related BudgetMaster
+        self.update_budget_master()
+
+    def get_budget_master(self):
+        # Retrieve BudgetMaster related to this DrawTracking's loan
+        return BudgetMaster.objects.filter(loan=self.loan).all()
+
+    def update_budget_master(self):
+
+        budget_master = self.get_budget_master()
+        update_budget_lis = list()
+        for budget in budget_master:
+            # Sum up total funded amounts from all related DrawTracking instances
+            total_funded = DrawRequest.objects.filter(budget_master=budget.id).aggregate(
+                total_funded=Sum('funded_amount')
+            )['total_funded'] or 0  # Default to 0 if no DrawTracking exists
+            # Update the BudgetMaster's total_funded and remaining_to_fund
+            budget.total_funded = total_funded
+            budget.remaining_to_fund = budget.loan_budget - total_funded
+            budget.total_funded_percentage = (total_funded / budget.loan_budget)*100 if budget.loan_budget !=0 else 0
+            update_budget_lis.append(budget)
+        BudgetMaster.objects.bulk_update(update_budget_lis, ['total_funded', 'remaining_to_fund', 'total_funded_percentage'])    
     
 class DrawRequest(models.Model):
     id = models.AutoField(primary_key=True)

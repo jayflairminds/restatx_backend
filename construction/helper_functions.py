@@ -11,7 +11,7 @@ def disbursement_schedule(loan_id):
     if len(draws_obj_lis) > duration:
         duration = len(draws_obj_lis)
 
-    months = np.arange(1, duration + 1) # Dividing total months into list of months
+    months = np.arange(0, duration) # Dividing total months into list of months
     normalized_months = (months - duration / 2) / (duration / 10)
 
     s_curve_values = sigmoid(normalized_months)

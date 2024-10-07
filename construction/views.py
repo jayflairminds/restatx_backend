@@ -626,15 +626,14 @@ class CreateUpdateDrawRequest(APIView):
             else:
                 val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
                 draw_request = val[0] +1
-                # Check the status of the previous draw from the DrawTracking table
-                last_draw = DrawTracking.objects.get(loan_id=loan_id,draw_request=val[0])
-                # If the last draw exists and its status is "Pending" or "In Review", prevent new draw creation
-                if last_draw and last_draw.draw_status in ["Pending", "In Review"]:
-                    return Response(
-                         {"error":"The previous draw is still 'Pending' or 'In Review'. Cannot create a new draw."},
-                         status=status.HTTP_400_BAD_REQUEST
-                    )
-
+                # # Check the status of the previous draw from the DrawTracking table
+                # last_draw = DrawTracking.objects.get(loan_id=loan_id,draw_request=val[0])
+                # # If the last draw exists and its status is "Pending" or "In Review", prevent new draw creation
+                # if last_draw and last_draw.draw_status in ["Pending", "In Review"]:
+                #     return Response(
+                #          {"error":"The previous draw is still 'Pending' or 'In Review'. Cannot create a new draw."},
+                #          status=status.HTTP_400_BAD_REQUEST
+                #     )
                 
                 for obj in budget_master_obj:
                     budget_amount = obj[1]  
