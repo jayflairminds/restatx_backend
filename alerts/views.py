@@ -10,16 +10,18 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 
 
-def create_notification(notify_to,sender, title, message, notification_type='IN', link=None):
+def create_notification(notify_to,sender, title, message, loan,notification_type='IN', link=None):
 
     notification = Notification.objects.create(
         notify_to=notify_to,
         sender = sender,
         title=title,
         message=message,
+        loan=loan,
         notification_type=notification_type,
-        link=link
-    )
+        link=link,
+        
+ )
     return notification
 
 class NotificationManager(APIView):
