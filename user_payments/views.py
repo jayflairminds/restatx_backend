@@ -28,10 +28,10 @@ class CreateCheckoutSession(APIView):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url=f'https://glasdex.com/success/',
-                cancel_url='https://glasdex.com/cancel'
+                success_url='http://localhost:5173/success?sessionid={CHECKOUT_SESSION_ID}',
+                cancel_url='http://localhost:5173/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
-            return Response({'sessionId': session.id,'status':'session_created'})
+            return Response({'sessionId': session.id,'status':'session_created',"session":session})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
         
@@ -68,20 +68,19 @@ class StripeWebhook(APIView):
 class CreatePaymentIntent(APIView):
     permission_classes = [IsAuthenticated]
 
-    # Probable payload : {
-    # "payment_method_id": "pm_card_visa"  // This ID is obtained from Stripe.js
-    # }
-
     def post(self,request):
         try:
             input_json = request.data
             payment_method_id = input_json.get('payment_method_id')
-        
+            session_id = input_json.get('session_id')
+            session = stripe.checkout.Session.retrieve(session_id)
+            amount = session.amount_total
+            currency = session.currency
             payment_intent = stripe.PaymentIntent.create(
-                amount=1000,
-                currency='usd',
-                # payment_method=payment_method_id,
-                payment_method='pm_card_visa',
+                amount=amount,
+                currency=currency,
+                payment_method=payment_method_id,
+                # payment_method='pm_card_visa',
                 # confirmation_method='manual',
                 confirm=True,
                 automatic_payment_methods={
