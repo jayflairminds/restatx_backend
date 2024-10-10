@@ -12,6 +12,7 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator 
 from django.utils.http import urlsafe_base64_decode
 from django.conf import settings
+from user_payments.models import Payments
 
 
 
@@ -31,11 +32,21 @@ class LoginView(APIView):
         user = serializer.validated_data["user"]
         _, token = AuthToken.objects.create(user)
         profile = UserProfile.objects.get(user=user)
+        try:
+            payment = Payments.objects.get(user=user)
+            print('payment',payment)
+            subscription_status = payment.subscription_status 
+        except Payments.DoesNotExist:
+            subscription_status = "inactive"
+
+
+
         return Response(
             {
                 "user_data": serialize_user(user),
                 "role_type": profile.role_type,
                 "token": token,
+                 "subscription_status": subscription_status
             }
         )
 

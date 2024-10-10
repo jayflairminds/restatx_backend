@@ -138,7 +138,7 @@ class SavePaymentDetails(APIView):
             product_id = subscription.plan.product
             product = stripe.Product.retrieve(product_id) 
             # Extract the tier name (product name)
-            tier = product.name if product and product.name else 'No Tier'
+            tier = product.name 
 
             # Prepare the data to store in the database
             payment_data = {
