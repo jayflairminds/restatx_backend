@@ -20,13 +20,13 @@ def disbursement_schedule(loan_id):
     
     draw_request_dict = {item['draw_request']: item['total_released_amount'] for item in draws_obj_lis}
     print('draw_request_dict',draw_request_dict)
-    output_lis = create_output_json(months, scaled_s_curve_values, draw_request_dict)
+    output_lis = create_disbursement_schedule_output_json(months, scaled_s_curve_values, draw_request_dict)
     return output_lis
 
 def sigmoid(amount):
     return 1 / (1 + np.exp(-amount))
 
-def create_output_json(months,scaled_s_curve_values,draw_request_dict):
+def create_disbursement_schedule_output_json(months,scaled_s_curve_values,draw_request_dict):
     input_lis = list(zip(months, scaled_s_curve_values))
     print(input_lis)
     output_lis = list()
@@ -43,3 +43,19 @@ def create_output_json(months,scaled_s_curve_values,draw_request_dict):
             output_dictionary["actual"] = 0
         output_lis.append(output_dictionary)
     return output_lis
+
+
+def construction_expenditure(loan_id):
+    budget_master_lis = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id','uses')
+    budget_master_ids = [i[0] for i in budget_master_lis]
+    max_draw = DrawRequest.objects.filter(budget_master__in = budget_master_ids).aggregate(Max('draw_request'))
+    draw_request = DrawRequest.objects.filter(budget_master__in = budget_master_ids,draw_request=max_draw['draw_request__max'])
+    expenditure_lis =  list()
+    for draw in draw_request:
+        for id,uses in budget_master_lis:
+            if draw.budget_master_id == id:
+                expenditure_dict = dict()
+                expenditure_dict['released_amount'] = draw.released_amount
+                expenditure_dict['uses'] = uses
+                expenditure_lis.append(expenditure_dict)
+    return expenditure_lis

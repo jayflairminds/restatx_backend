@@ -16,7 +16,7 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-from construction.helper_functions import disbursement_schedule 
+from construction.helper_functions import disbursement_schedule ,construction_expenditure
 import pandas as pd
 
 class LoanListView(generics.ListAPIView):
@@ -183,9 +183,11 @@ class DashboardGraph(APIView):
                 queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ConstructionStatusSerializer(queryset, many=True)
             case 'construction_expenditure_graph':
+                construction_expenditure(loan_id)
                 max_review_month = ConstructionStatus.objects.filter(loan_id=loan_id).aggregate(Max('review_months'))['review_months__max']
                 queryset = ConstructionStatus.objects.filter(loan_id=loan_id,review_months=max_review_month) 
                 serializer = ConstructionStatusSerializer(queryset, many=True)
+                return Response(construction_expenditure(loan_id))
         return Response(serializer.data)
     
 class Budget(APIView):
@@ -433,7 +435,7 @@ class CreateRetrieveUpdateLoan(APIView):
 
     def get(self, request):
         input_params = request.query_params
-        id = input_params.get('id')
+        id = input_params.get('loan_id')
         
         if id:
             try:
