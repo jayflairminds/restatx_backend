@@ -916,7 +916,7 @@ class UploadBudget(APIView):
         for column in ['original loan budget','adjustments','equity budget']:
             if column not in df.columns:
                 return Response({'response':f"{column} not present"},status=status.HTTP_404_NOT_FOUND)
-       
+        df = df.fillna(0)
         if 'revised budget' not in df.columns:
             df['revised budget'] = df['original loan budget'] + df['adjustments']  
         if 'loan budget' not in df.columns:

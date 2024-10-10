@@ -6,6 +6,7 @@ from django.conf import settings
 from rest_framework import status
 import os
 from core import *
+from .serializers import *
 
 # from user_payments.helper_functions import payment_status
 
@@ -113,4 +114,55 @@ class PricesList(APIView):
         limit = input_params.get('limit')
         product = input_params.get('product')
         response = stripe.Price.list(limit=limit,product=product)
-        return Response(response,status=status.HTTP_200_OK)
+        return Response(response,status=status.HTTP_200_OK) 
+    
+class SavePaymentDetails(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def post(self,request):
+
+        data = request.data
+        data["stripe_session_id"] = data.get('session_id')
+        
+        try:
+            # Retrieve the checkout session using the session ID
+            stripe_session = stripe.checkout.Session.retrieve(data['stripe_session_id']) 
+
+            # Retrieve the subscription ID from the checkout session
+            subscription_id = stripe_session.get('subscription') 
+
+             # Now retrieve the subscription details
+            subscription = stripe.Subscription.retrieve(subscription_id)
+
+            # Retrieve the product details to get the tier (product name)
+            product_id = subscription.plan.product
+            product = stripe.Product.retrieve(product_id) 
+            # Extract the tier name (product name)
+            tier = product.name if product and product.name else 'No Tier'
+
+            # Prepare the data to store in the database
+            payment_data = {
+                'stripe_session_id': data['stripe_session_id'],
+                'stripe_subscription_id': subscription.id,  # Subscription ID
+                'subscription_status': subscription.status,  # Status (active, canceled, etc.)
+                'tier': tier,
+                'created_at': subscription.created,  # Account creation date (timestamp)
+                'renew_at': subscription.current_period_end,  # Renewal date (timestamp)
+                'transaction_fee': subscription.application_fee_percent if subscription.application_fee_percent else 0,  # Transaction fee (if applicable)
+                'description': subscription.description if subscription.description else '',  # Subscription description
+                'currency': stripe_session.currency,  # Currency
+                'amount': stripe_session.amount_total,  # Total amount
+                'payment_status': stripe_session.payment_status,  # Payment status,
+                'user': request.user.id
+                
+            }
+  
+            serializer = PaymentSerializer(data=payment_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"message":"Payment data saved successfully","Payment":serializer.data},status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except stripe.error.StripeError as e:
+             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

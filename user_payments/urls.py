@@ -6,5 +6,6 @@ urlpatterns = [
     path('stripe-webhook/', StripeWebhook.as_view(), name='stripe-webhook'),
     path('create-payment-intent/',CreatePaymentIntent.as_view(),name='create-payment-intent'),
     path('product-list/', ProductList.as_view(), name='product-list'),
-    path('prices-list/',PricesList.as_view(),name="subscription-list")
+    path('prices-list/',PricesList.as_view(),name="subscription-list"),
+    path('save-payment-details/',SavePaymentDetails.as_view(),name='insert-data')
 ]
