@@ -1,5 +1,6 @@
 from django.db import models
 from users.models import User
+from django.db.models import Sum
 
 PROJECT_TYPE_CHOICES = [("residential", "Residential"), ("commercial", "Commercial")]
 
@@ -136,14 +137,14 @@ class BudgetMaster(models.Model):
     adjustments = models.IntegerField(null=True,blank=True,default=0)
     revised_budget = models.IntegerField(null= True,blank=True,default=0)
     equity_budget = models.IntegerField(null=True,blank=True,default=0)
-    loan_budget = models.IntegerField(null=True,blank=True)
-    acquisition_loan = models.IntegerField(null= True,blank=True)
-    building_loan = models.IntegerField(null= True,blank=True)
-    project_loan = models.IntegerField(null= True,blank=True)
-    mezzanine_loan = models.IntegerField(null= True,blank=True)
-    total_funded = models.IntegerField(null= True,blank=True)
-    remaining_to_fund = models.IntegerField(null= True,blank=True)
-    total_funded_percentage = models.IntegerField(null= True,blank=True)
+    loan_budget = models.IntegerField(null=True,blank=True,default=0)
+    acquisition_loan = models.IntegerField(null= True,blank=True,default=0)
+    building_loan = models.IntegerField(null= True,blank=True,default=0)
+    project_loan = models.IntegerField(null= True,blank=True,default=0)
+    mezzanine_loan = models.IntegerField(null= True,blank=True,default=0)
+    total_funded = models.IntegerField(null= True,blank=True,default=0)
+    remaining_to_fund = models.IntegerField(null= True,blank=True,default=0)
+    total_funded_percentage = models.IntegerField(null= True,blank=True,default=0)
     uses = models.CharField(max_length=150)
     uses_type = models.CharField(null=True,blank=True)
 
@@ -156,7 +157,7 @@ class DrawTracking(models.Model):
     loan = models.ForeignKey(Loan, on_delete=models.CASCADE,null=True)
     total_released_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     total_budget_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
-    total_funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
+    total_funded_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True,default=0)
     total_balance_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     total_draw_amount = models.DecimalField(max_digits=30, decimal_places=3,null=True)
     requested_date = models.DateTimeField(null=True, blank=True)
@@ -165,6 +166,32 @@ class DrawTracking(models.Model):
 
     def __str__(self):
         return f"Draw Tracking ID {self.id}"
+
+    def save(self, *args, **kwargs):
+        # Call the original save method
+        super().save(*args, **kwargs)
+        # Update the remaining_to_fund in the related BudgetMaster
+        self.update_budget_master()
+
+    def get_budget_master(self):
+        # Retrieve BudgetMaster related to this DrawTracking's loan
+        return BudgetMaster.objects.filter(loan=self.loan).all()
+
+    def update_budget_master(self):
+
+        budget_master = self.get_budget_master()
+        update_budget_lis = list()
+        for budget in budget_master:
+            # Sum up total funded amounts from all related DrawTracking instances
+            total_funded = DrawRequest.objects.filter(budget_master=budget.id).aggregate(
+                total_funded=Sum('funded_amount')
+            )['total_funded'] or 0  # Default to 0 if no DrawTracking exists
+            # Update the BudgetMaster's total_funded and remaining_to_fund
+            budget.total_funded = total_funded
+            budget.remaining_to_fund = budget.loan_budget - total_funded
+            budget.total_funded_percentage = (total_funded / budget.loan_budget)*100 if budget.loan_budget !=0 else 0
+            update_budget_lis.append(budget)
+        BudgetMaster.objects.bulk_update(update_budget_lis, ['total_funded', 'remaining_to_fund', 'total_funded_percentage'])    
     
 class DrawRequest(models.Model):
     id = models.AutoField(primary_key=True)

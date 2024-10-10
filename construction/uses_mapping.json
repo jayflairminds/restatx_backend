@@ -2,10 +2,10 @@
     "residential":{
         "Acquisition cost": ["Purchase Price", 
                                 "Acquisition Closing Costs",
-                                "Oct 2014 Additional Loan Proceeds Closing Costs", 
+                                "Additional Loan Proceeds Closing Costs", 
                                 "Property & Liability Insurance Paid at Acquisition Closing", 
-                                "Property Taxes Paid through 6/30/15",
-                                "Property Taxes (2H 2015)", 
+                                "Property Taxes Paid to date",
+                                "Property Taxes", 
                                 "Pre-Development Interest Paid to Date", 
                                 "Extension Fees Paid to Date"],
         "Hard cost": ["Div 1 Gen'l Requirements", 
@@ -35,10 +35,10 @@
     "commercial":{
         "Acquisition cost": ["Purchase Price", 
         "Acquisition Closing Costs",
-        "Oct 2014 Additional Loan Proceeds Closing Costs", 
+        "Additional Loan Proceeds Closing Costs", 
         "Property & Liability Insurance Paid at Acquisition Closing", 
-        "Property Taxes Paid through 6/30/15",
-        "Property Taxes (2H 2015)", 
+        "Property Taxes Paid to date",
+        "Property Taxes", 
         "Pre-Development Interest Paid to Date", 
         "Extension Fees Paid to Date"],
         
@@ -68,10 +68,10 @@
     "industrial":{
         "Acquisition cost": ["Purchase Price", 
         "Acquisition Closing Costs",
-        "Oct 2014 Additional Loan Proceeds Closing Costs", 
+        "Additional Loan Proceeds Closing Costs", 
         "Property & Liability Insurance Paid at Acquisition Closing", 
-        "Property Taxes Paid through 6/30/15",
-        "Property Taxes (2H 2015)", 
+        "Property Taxes Paid to date",
+        "Property Taxes", 
         "Pre-Development Interest Paid to Date", 
         "Extension Fees Paid to Date"],
         
@@ -101,10 +101,10 @@
     "hospitality":{
         "Acquisition cost": ["Purchase Price", 
         "Acquisition Closing Costs",
-        "Oct 2014 Additional Loan Proceeds Closing Costs", 
+        "Additional Loan Proceeds Closing Costs", 
         "Property & Liability Insurance Paid at Acquisition Closing", 
-        "Property Taxes Paid through 6/30/15",
-        "Property Taxes (2H 2015)", 
+        "Property Taxes Paid to date",
+        "Property Taxes", 
         "Pre-Development Interest Paid to Date", 
         "Extension Fees Paid to Date"],
         

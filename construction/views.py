@@ -16,7 +16,7 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-from construction.helper_functions import disbursement_schedule 
+from construction.helper_functions import disbursement_schedule ,construction_expenditure
 import pandas as pd
 
 class LoanListView(generics.ListAPIView):
@@ -175,15 +175,19 @@ class DashboardGraph(APIView):
                 queryset = ScheduleStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ScheduleStatusSerializer(queryset, many=True)
             case 'disbursement_schedule_graph':
+                print(disbursement_schedule(loan_id))
                 queryset = DisbursementSchedule.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = DisbursementScheduleSerializer(queryset, many=True)
+                return Response(disbursement_schedule(loan_id))
             case 'construction_status_graph':
                 queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ConstructionStatusSerializer(queryset, many=True)
             case 'construction_expenditure_graph':
+                construction_expenditure(loan_id)
                 max_review_month = ConstructionStatus.objects.filter(loan_id=loan_id).aggregate(Max('review_months'))['review_months__max']
                 queryset = ConstructionStatus.objects.filter(loan_id=loan_id,review_months=max_review_month) 
                 serializer = ConstructionStatusSerializer(queryset, many=True)
+                return Response(construction_expenditure(loan_id))
         return Response(serializer.data)
     
 class Budget(APIView):
@@ -237,7 +241,7 @@ class Budget(APIView):
                     'id', 'loan_id', 'original_loan_budget','adjustments','revised_budget', 
                     'equity_budget','loan_budget',
                     'acquisition_loan', 'building_loan', 'project_loan',
-                    'mezzanine_loan', 'uses'
+                    'mezzanine_loan', 'uses','remaining_to_fund','total_funded_percentage'
                 ).order_by('uses')
                 
                 
@@ -253,7 +257,8 @@ class Budget(APIView):
                     acquisition_loan_sum=Sum('acquisition_loan'),
                     building_loan_sum=Sum('building_loan'),
                     project_loan_sum=Sum('project_loan'),
-                    mezzanine_loan_sum=Sum('mezzanine_loan')
+                    mezzanine_loan_sum=Sum('mezzanine_loan'),
+                    remaining_to_fund_sum=Sum('remaining_to_fund')
                 )
                 
                 output_list = list(queryset)
@@ -270,6 +275,7 @@ class Budget(APIView):
                     "building_loan": totals['building_loan_sum'] or 0,
                     "project_loan": totals['project_loan_sum'] or 0,
                     "mezzanine_loan": totals['mezzanine_loan_sum'] or 0,
+                    "remaining_to_fund" :  totals['remaining_to_fund_sum'] or 0
                 }
                 output_list.append(total_of_table)
                 
@@ -296,7 +302,7 @@ class BudgetSummary(APIView):
         try: 
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_original_loan_budget=Sum('original_loan_budget'),
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type','total_funded_percentage').annotate(total_original_loan_budget=Sum('original_loan_budget'),
                                                                         total_adjustments= Sum('adjustments'),
                                                                         total_revised_budget= Sum('revised_budget'),
                                                                         total_equity_budget= Sum('equity_budget'),                           
@@ -304,7 +310,9 @@ class BudgetSummary(APIView):
                                                                         total_acquisition_loan= Sum('acquisition_loan'),
                                                                         total_building_loan= Sum('building_loan'),
                                                                         total_mezzanine_loan= Sum('mezzanine_loan'),
-                                                                        total_project_loan = Sum('project_loan')).order_by('uses_type')
+                                                                        total_project_loan = Sum('project_loan'),
+                                                                        total_remaining_to_fund = Sum('remaining_to_fund')).order_by('uses_type')
+                                                                        
             
             totals = queryset.aggregate(
                         original_loan_budget_sum=Sum('total_original_loan_budget'),
@@ -314,7 +322,9 @@ class BudgetSummary(APIView):
                         loan_budget_sum=Sum('total_loan_budget'),
                         acquisition_loan_sum=Sum('total_acquisition_loan'),
                         building_loan_sum=Sum('total_building_loan'),
-                        mezzanine_loan_sum=Sum('total_mezzanine_loan'))
+                        mezzanine_loan_sum=Sum('total_mezzanine_loan'),
+                        remaining_to_fund_sum=Sum('total_remaining_to_fund'))
+                        
             total_output = {
                 "uses_type" : 'Total',
                 "total_original_loan_budget" : totals['original_loan_budget_sum'] or 0,
@@ -325,6 +335,8 @@ class BudgetSummary(APIView):
                 "total_acquisition_loan" : totals['acquisition_loan_sum'] or 0,
                 "total_building_loan" : totals['building_loan_sum'] or 0,
                 "mezzanine_loan_sum" : totals['mezzanine_loan_sum'] or 0,
+                "total_remaining_to_fund": totals['remaining_to_fund_sum'] or 0
+                
            }
             result = list(queryset)
             result.append(total_output)
@@ -396,6 +408,8 @@ class CreateRetrieveUpdateLoan(APIView):
         project_id = request.data.get('project')   
         try:
             project_type = Project.objects.get(pk=project_id).project_type
+            if Loan.objects.filter(project_id=project_id).exists():
+                return Response({"detail": "This project is already associated with a loan."}, status=status.HTTP_409_CONFLICT)
         except Project.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         input_json['loantype'] = project_type
@@ -408,6 +422,7 @@ class CreateRetrieveUpdateLoan(APIView):
         
         if serializer.is_valid():
             loan = serializer.save()
+
             document_details = DocumentDetail.objects.filter(document_type_id__in = list(document_type_obj))
             document_details_list = list()
             for detail in document_details:
@@ -421,14 +436,14 @@ class CreateRetrieveUpdateLoan(APIView):
             user = request.user
             inspector = loan.inspector
             lender = loan.lender
-            create_notification(inspector, user,"Loan Application", f"{user.username} has created a loan.", 'AL')
-            create_notification(lender, user,"Loan Application", f"{user.username} has created a loan.", 'AL')            
+            create_notification(inspector, user,"Loan Application", f"{user.username} has created a loan.",loan=loan,notification_type='AL')
+            create_notification(lender, user,"Loan Application", f"{user.username} has created a loan.",loan=loan,notification_type='AL')            
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request):
         input_params = request.query_params
-        id = input_params.get('id')
+        id = input_params.get('loan_id')
         
         if id:
             try:
@@ -543,8 +558,8 @@ class LoanApprovalStatus(APIView):
         if loan_obj.status == 'Pending' or loan_obj.status == 'Rejected':
             loan_obj.status = 'In Review'
             loan_obj.save()
-            create_notification(loan_obj.inspector, request.user,"Loan Application", f"{request.user.username} has applied for a loan.", 'AL')
-            create_notification(loan_obj.lender, request.user,"Loan Application", f"{request.user.username} has applied for a loan.", 'AL')  
+            create_notification(loan_obj.inspector, request.user,"Loan Application", f"{request.user.username} has applied for a loan.",loan=loan_obj, notification_type='AL')
+            create_notification(loan_obj.lender, request.user,"Loan Application", f"{request.user.username} has applied for a loan.",loan=loan_obj, notification_type='AL')  
             return Response(status=status.HTTP_200_OK)
         else:
             return Response({'error':'loan can only be submitted when status is Pending or Rejected'},status=status.HTTP_403_FORBIDDEN)
@@ -566,20 +581,20 @@ class LoanApprovalStatus(APIView):
         if profile.role_type == "inspector" and my_instance.status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"{request.user.username} has submitted the loan for approval to the lender.", 'IN')
-                create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"{request.user.username} has submitted the loan for approval to the lender.",loan=my_instance,notification_type='IN')
+                create_notification(my_instance.lender, request.user,"Loan Application", f"{request.user.username} has done the inspection and sent for approval to you.",loan=my_instance,notification_type='AL')  
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected during inspection.", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected during inspection.",loan=my_instance,notification_type='WA')
 
         elif profile.role_type == "lender" and my_instance.status == "In Approval":
             if status_action == "Approve":
                 update_status = "Approved"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.loanid} has been Approved.", 'SU')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID: {my_instance.loanid} has been Approved.",loan=my_instance,notification_type='SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected by the Lender", 'WA')
+                create_notification(my_instance.borrower, request.user,"Loan Application", f"Your Loan with Loan ID :{my_instance.loanid} has been rejected by the Lender",loan=my_instance,notification_type='WA')
 
         if update_status:
             my_instance.status = update_status
@@ -621,11 +636,24 @@ class CreateUpdateDrawRequest(APIView):
             else:
                 val = draw_req_obj.order_by('-draw_request').values_list('draw_request',flat=True)
                 draw_request = val[0] +1
+                # # Check the status of the previous draw from the DrawTracking table
+                # last_draw = DrawTracking.objects.get(loan_id=loan_id,draw_request=val[0])
+                # # If the last draw exists and its status is "Pending" or "In Review", prevent new draw creation
+                # if last_draw and last_draw.draw_status in ["Pending", "In Review"]:
+                #     return Response(
+                #          {"error":"The previous draw is still 'Pending' or 'In Review'. Cannot create a new draw."},
+                #          status=status.HTTP_400_BAD_REQUEST
+                #     )
+                
                 for obj in budget_master_obj:
                     budget_amount = obj[1]  
                     released_amount_previous = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
                     released_amount_list = list(released_amount_previous)
-                    released_amount=released_amount_list[0]
+                    if released_amount_list:
+                        released_amount=released_amount_list[0]
+                    else:
+                        released_amount = 0
+                    
                     new_instance = DrawRequest(
                         budget_master_id=obj[0],
                         draw_request = draw_request,                    
@@ -731,11 +759,12 @@ class CreateUpdateDrawRequest(APIView):
             draw_request_obj = DrawRequest.objects.filter(
                 budget_master_id__in= budget_master_id,
                 draw_request = draw_request
-            )
+            ).order_by('budget_master__uses_type','budget_master__uses')
+            
         else:
             draw_request_obj = DrawRequest.objects.filter(
                 budget_master_id__in= budget_master_id
-            )
+            ).order_by('budget_master__uses_type','budget_master__uses')
         serializers = DrawRequestSerializer(draw_request_obj,many=True)
         return Response(serializers.data, status=status.HTTP_200_OK)
     
@@ -755,12 +784,15 @@ class RetrieveDeleteUpdateDrawTracking(APIView):
     def delete(self, request, id):
         try:
             draw_tracking_obj = DrawTracking.objects.get(pk=id)
-            draw_request = draw_tracking_obj.draw_request
-            loan_id = draw_tracking_obj.loan
-            draw_tracking_obj.delete()
-            budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id',flat=True)
-            DrawRequest.objects.filter(draw_request=draw_request, budget_master_id__in = budget_master_ids).delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            if draw_tracking_obj.draw_status in ['Pending','In Review']: 
+                draw_request = draw_tracking_obj.draw_request
+                loan_id = draw_tracking_obj.loan
+                draw_tracking_obj.delete()
+                budget_master_ids = BudgetMaster.objects.filter(loan_id=loan_id).values_list('id',flat=True)
+                DrawRequest.objects.filter(draw_request=draw_request, budget_master_id__in = budget_master_ids).delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error":"Only draw requests with 'Pending' or 'In Review' status can be deleted."},status=status.HTTP_403_FORBIDDEN)
         except DrawTracking.DoesNotExist:
             return Response({"error": "DrawTracking object not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
@@ -787,8 +819,8 @@ class DrawTrackingStatus(APIView):
         if draw_tracking_obj.draw_status in ['Pending', 'Rejected']:
             draw_tracking_obj.draw_status = 'In Review'
             draw_tracking_obj.save()
-            create_notification(loan_obj.inspector, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.", 'AL')
-            create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.", 'AL')  
+            create_notification(loan_obj.inspector, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.",loan=loan_obj,notification_type= 'AL')
+            create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has submitted a Draw Request.",loan=loan_obj,notification_type= 'AL')  
 
             return Response({"Response":"Draw successfully submitted"},status=status.HTTP_200_OK)
         else:
@@ -811,12 +843,12 @@ class DrawTrackingStatus(APIView):
         if profile.role_type == "inspector" and my_instance.draw_status == "In Review":
             if status_action == "Approve":
                 update_status = "In Approval"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"{request.user.username} has submitted the draw for approval to the lender.", 'IN')
-                create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has done the inspection and sent for approval to you.", 'AL')  
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"{request.user.username} has submitted the draw for approval to the lender.",loan=loan_obj,notification_type='IN')
+                create_notification(loan_obj.lender, request.user,"Draw Application", f"{request.user.username} has done the inspection and sent for approval to you.",loan=loan_obj,notification_type='AL')  
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.loanid} has been rejected during inspection.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID :{loan_obj.loanid} has been rejected during inspection.",loan=loan_obj,notification_type= 'WA')
 
         elif profile.role_type == "lender" and my_instance.draw_status == "In Approval":
             if status_action == "Approve":
@@ -853,11 +885,11 @@ class DrawTrackingStatus(APIView):
                 # Assign the total released amount (which includes previous draws)
                 my_instance.total_released_amount = previous_and_current_funded_total
                
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.loanid} has been Approved.", 'SU')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request no. : {my_instance.draw_request} for Loan ID: {loan_obj.loanid} has been Approved.",loan=loan_obj,notification_type='SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
-                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.loanid} has been rejected by lender.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Draw Application", f"Draw request : {my_instance.draw_request} with Loan ID :{loan_obj.loanid} has been rejected by lender.",loan=loan_obj,notification_type='WA')
 
         if update_status:
             my_instance.draw_status = update_status
@@ -894,7 +926,7 @@ class UploadBudget(APIView):
         for column in ['original loan budget','adjustments','equity budget']:
             if column not in df.columns:
                 return Response({'response':f"{column} not present"},status=status.HTTP_404_NOT_FOUND)
-       
+        df = df.fillna(0)
         if 'revised budget' not in df.columns:
             df['revised budget'] = df['original loan budget'] + df['adjustments']  
         if 'loan budget' not in df.columns:
@@ -921,3 +953,27 @@ class UploadBudget(APIView):
             return Response({'error': f'Failed to save data: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)  
         
         return Response({'message': 'Data uploaded and saved successfully'}, status=status.HTTP_201_CREATED)
+    
+class RetrieveSpentToDate(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def get(self,request):
+        input_params = request.query_params
+
+        loan_id = input_params.get('loan_id')
+        if not loan_id:
+            return Response({'error':'loan id is required'},status=400)
+        
+        if not Loan.objects.filter(loanid=loan_id).exists():
+            return Response({"error":"loanid does not exist"},status=400)
+        
+        try:
+            draws = DrawTracking.objects.filter(loan_id=loan_id) 
+            if draws:
+                spent_to_date = draws.aggregate(total_spent=Sum('total_funded_amount'))['total_spent'] or 0
+                return Response({"spent_to_date":spent_to_date, 'message': 'Success'},status=200)
+            else:
+                 return Response({ 'spent_to_date': 0,'message': f'No draws found for loan_id {loan_id}'}, status=404)
+            
+        except Exception as e:
+            return Response({"error":str(e)},status=500)

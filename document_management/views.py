@@ -55,8 +55,8 @@ class DocumentManagement(APIView):
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'In Review'
-                create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.", 'AL')
-                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.", 'AL')  
+                create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')
+                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')  
                 existing_instance.uploaded_at = datetime.datetime.now()
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
@@ -163,24 +163,24 @@ class DocumentStatus(APIView):
             if status_action == "Approve":
                 update_status = "Pending Lender"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{request.user.username} has submitted the {document_detail_obj.name} document for approval to the lender.", 'IN')
-                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has done the verified the {document_detail_obj.name} document and sent for approval to you.", 'AL')  
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{request.user.username} has submitted the {document_detail_obj.name} document for approval to the lender.",loan=loan_obj,notification_type= 'IN')
+                create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has done the verified the {document_detail_obj.name} document and sent for approval to you.",loan=loan_obj,notification_type= 'AL')  
 
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected.",loan=loan_obj,notification_type= 'WA')
 
         elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
             if status_action == "Approve":
                 update_status = "Approved"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been Approved.", 'SU')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been Approved.",loan=loan_obj,notification_type= 'SU')
 
             elif status_action == "Reject":
                 update_status = "Rejected"
                 my_instance.document_comment = comment
-                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected by lender.", 'WA')
+                create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected by lender.",loan=loan_obj,notification_type= 'WA')
 
         if update_status:
             my_instance.status = update_status
