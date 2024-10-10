@@ -16,7 +16,7 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-from construction.helper_functions import disbursement_schedule 
+from construction.helper_functions import disbursement_schedule ,construction_expenditure
 import pandas as pd
 
 class LoanListView(generics.ListAPIView):
@@ -183,9 +183,11 @@ class DashboardGraph(APIView):
                 queryset = ConstructionStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ConstructionStatusSerializer(queryset, many=True)
             case 'construction_expenditure_graph':
+                construction_expenditure(loan_id)
                 max_review_month = ConstructionStatus.objects.filter(loan_id=loan_id).aggregate(Max('review_months'))['review_months__max']
                 queryset = ConstructionStatus.objects.filter(loan_id=loan_id,review_months=max_review_month) 
                 serializer = ConstructionStatusSerializer(queryset, many=True)
+                return Response(construction_expenditure(loan_id))
         return Response(serializer.data)
     
 class Budget(APIView):
@@ -239,7 +241,7 @@ class Budget(APIView):
                     'id', 'loan_id', 'original_loan_budget','adjustments','revised_budget', 
                     'equity_budget','loan_budget',
                     'acquisition_loan', 'building_loan', 'project_loan',
-                    'mezzanine_loan', 'uses'
+                    'mezzanine_loan', 'uses','remaining_to_fund','total_funded_percentage'
                 ).order_by('uses')
                 
                 
@@ -255,7 +257,8 @@ class Budget(APIView):
                     acquisition_loan_sum=Sum('acquisition_loan'),
                     building_loan_sum=Sum('building_loan'),
                     project_loan_sum=Sum('project_loan'),
-                    mezzanine_loan_sum=Sum('mezzanine_loan')
+                    mezzanine_loan_sum=Sum('mezzanine_loan'),
+                    remaining_to_fund_sum=Sum('remaining_to_fund')
                 )
                 
                 output_list = list(queryset)
@@ -272,6 +275,7 @@ class Budget(APIView):
                     "building_loan": totals['building_loan_sum'] or 0,
                     "project_loan": totals['project_loan_sum'] or 0,
                     "mezzanine_loan": totals['mezzanine_loan_sum'] or 0,
+                    "remaining_to_fund" :  totals['remaining_to_fund_sum'] or 0
                 }
                 output_list.append(total_of_table)
                 
@@ -298,7 +302,7 @@ class BudgetSummary(APIView):
         try: 
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_original_loan_budget=Sum('original_loan_budget'),
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type','total_funded_percentage').annotate(total_original_loan_budget=Sum('original_loan_budget'),
                                                                         total_adjustments= Sum('adjustments'),
                                                                         total_revised_budget= Sum('revised_budget'),
                                                                         total_equity_budget= Sum('equity_budget'),                           
@@ -306,7 +310,9 @@ class BudgetSummary(APIView):
                                                                         total_acquisition_loan= Sum('acquisition_loan'),
                                                                         total_building_loan= Sum('building_loan'),
                                                                         total_mezzanine_loan= Sum('mezzanine_loan'),
-                                                                        total_project_loan = Sum('project_loan')).order_by('uses_type')
+                                                                        total_project_loan = Sum('project_loan'),
+                                                                        total_remaining_to_fund = Sum('remaining_to_fund')).order_by('uses_type')
+                                                                        
             
             totals = queryset.aggregate(
                         original_loan_budget_sum=Sum('total_original_loan_budget'),
@@ -316,7 +322,9 @@ class BudgetSummary(APIView):
                         loan_budget_sum=Sum('total_loan_budget'),
                         acquisition_loan_sum=Sum('total_acquisition_loan'),
                         building_loan_sum=Sum('total_building_loan'),
-                        mezzanine_loan_sum=Sum('total_mezzanine_loan'))
+                        mezzanine_loan_sum=Sum('total_mezzanine_loan'),
+                        remaining_to_fund_sum=Sum('total_remaining_to_fund'))
+                        
             total_output = {
                 "uses_type" : 'Total',
                 "total_original_loan_budget" : totals['original_loan_budget_sum'] or 0,
@@ -327,6 +335,8 @@ class BudgetSummary(APIView):
                 "total_acquisition_loan" : totals['acquisition_loan_sum'] or 0,
                 "total_building_loan" : totals['building_loan_sum'] or 0,
                 "mezzanine_loan_sum" : totals['mezzanine_loan_sum'] or 0,
+                "total_remaining_to_fund": totals['remaining_to_fund_sum'] or 0
+                
            }
             result = list(queryset)
             result.append(total_output)
@@ -433,7 +443,7 @@ class CreateRetrieveUpdateLoan(APIView):
 
     def get(self, request):
         input_params = request.query_params
-        id = input_params.get('id')
+        id = input_params.get('loan_id')
         
         if id:
             try:
