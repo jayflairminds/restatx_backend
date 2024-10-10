@@ -19,7 +19,7 @@ class CreateCheckoutSession(APIView):
         input_json = request.data
         tier = input_json.get('tier')
         price_id = input_json.get('price_id')
-        
+        #localhost = http://localhost:5173
         # Creating Stripe Checkout session
         try:
             session = stripe.checkout.Session.create(
@@ -29,8 +29,9 @@ class CreateCheckoutSession(APIView):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                success_url='http://localhost:5173/success?sessionid={CHECKOUT_SESSION_ID}',
-                cancel_url='http://localhost:5173/cancel?sessionid={CHECKOUT_SESSION_ID}'
+                
+                success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
+                cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
             return Response({'sessionId': session.id,'status':'session_created',"session":session})
         except Exception as e:
