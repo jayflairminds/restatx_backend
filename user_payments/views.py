@@ -7,6 +7,7 @@ from rest_framework import status
 import os
 from core import *
 from .serializers import *
+from django.utils import timezone
 
 # from user_payments.helper_functions import payment_status
 
@@ -20,6 +21,7 @@ class CreateCheckoutSession(APIView):
         tier = input_json.get('tier')
         price_id = input_json.get('price_id')
         #localhost = http://localhost:5173
+        #localhost = https://glasdex.com
         # Creating Stripe Checkout session
         try:
             session = stripe.checkout.Session.create(
@@ -154,8 +156,8 @@ class SavePaymentDetails(APIView):
                 'currency': stripe_session.currency,  # Currency
                 'amount': stripe_session.amount_total,  # Total amount
                 'payment_status': stripe_session.payment_status,  # Payment status,
-                'user': request.user.id
-                
+                'user': request.user.id,
+                'current_date':timezone.now()
             }
   
             serializer = PaymentSerializer(data=payment_data)
