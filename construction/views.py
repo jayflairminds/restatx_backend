@@ -17,7 +17,12 @@ from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
 from construction.helper_functions import disbursement_schedule ,construction_expenditure
+from django.http import HttpResponse
 import pandas as pd
+from reportlab.lib.pagesizes import letter, landscape
+from io import BytesIO
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, PageBreak
+from reportlab.lib import colors
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
@@ -976,4 +981,104 @@ class RetrieveSpentToDate(APIView):
                  return Response({ 'spent_to_date': 0,'message': f'No draws found for loan_id {loan_id}'}, status=404)
             
         except Exception as e:
-            return Response({"error":str(e)},status=500)
+            return Response({"error":str(e)},status=500) 
+        
+        
+        
+class ExportBudgetToExcel(APIView): 
+    permission_classes = [IsAuthenticated] 
+
+    def get(self, request):
+        input_params = request.query_params
+        loan_id = input_params.get('loan_id')
+        print('loan_id',loan_id)
+        file_format = request.query_params.get('file_format', 'excel')
+
+        if not loan_id:
+            return Response({'error':'loan_id is required'},status=400)
+        
+        budget_data = BudgetMaster.objects.filter(loan_id=loan_id).values()
+
+        if not budget_data.exists():
+            return Response({"detail": "No data found for the given loan_id"}, status=status.HTTP_404_NOT_FOUND)
+        
+        df = pd.DataFrame(list(budget_data))
+        
+        if file_format == 'pdf':
+            buffer = BytesIO()
+
+        # Create a PDF document in landscape to fit more columns
+            pdf = SimpleDocTemplate(buffer, pagesize=landscape(letter))
+
+        # Prepare data for the table
+            data = [df.columns.tolist()]  # Add column headers
+            data.extend(df.values.tolist())  # Add row data
+
+        # Split the table into chunks if it's too wide
+            num_columns = len(df.columns)
+            max_columns_per_page = 6 # Adjust this based on what fits on your page
+
+            elements = []  # List to hold all elements to be added to the PDF
+
+            for i in range(0, num_columns, max_columns_per_page):
+            # Get the subset of columns for the current page
+                current_columns = data[0][i:i + max_columns_per_page]
+                current_data = [row[i:i + max_columns_per_page] for row in data[1:]]
+
+            # Combine the column headers and data
+                current_page_data = [current_columns] + current_data
+
+            # Create the table
+                table = Table(current_page_data, repeatRows=1)
+
+            # Set table style with dynamic text wrapping and padding
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.white),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('WORDWRAP', (0, 0), (-1, -1), True),  # Enable word wrap
+                ]))
+
+            # Add the table to the elements
+                elements.append(table)
+
+            # Add a page break after each table except the last one
+                if i + max_columns_per_page < num_columns:
+                    elements.append(PageBreak())
+
+        # Build the PDF
+            pdf.build(elements)
+
+        # Return the PDF response
+            buffer.seek(0)
+            response = HttpResponse(buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="budget_data_loan_{loan_id}.pdf"'
+            return response
+
+        elif file_format == 'csv':
+
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="budget_data_loan_{loan_id}.csv"' 
+
+            writer = pd.ExcelWriter(response, engine='xlsxwriter')
+            df.to_csv(path_or_buf=response, index=False) 
+            return response
+
+
+        else:
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename="budget_data_loan_{loan_id}.xlsx"'
+
+            with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='BudgetData')
+
+            return response
