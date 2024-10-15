@@ -15,6 +15,7 @@ class Payments(models.Model):
     stripe_subscription_id = models.CharField(max_length=30,null=True, blank=True)
     account_creation_date = models.DateTimeField(null=True, blank=True)
     renew_date = models.DateTimeField(null=True, blank=True)
+    current_date = models.DateTimeField(null=True,blank=True)
 
     def __str__(self):
         return f'Payment {self.id} for {self.user} - Status: {self.payment_status}'    
