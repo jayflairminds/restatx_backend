@@ -8,7 +8,7 @@ import os
 from core import *
 from .serializers import *
 from django.utils import timezone
-
+import datetime
 # from user_payments.helper_functions import payment_status
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -31,7 +31,11 @@ class CreateCheckoutSession(APIView):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                
+                # subscription_data={
+                #     "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
+                #     "trial_period_days": 30,
+                # },
+                payment_method_collection="if_required",
                 success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
                 cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
@@ -149,8 +153,8 @@ class SavePaymentDetails(APIView):
                 'stripe_subscription_id': subscription.id,  # Subscription ID
                 'subscription_status': subscription.status,  # Status (active, canceled, etc.)
                 'tier': tier,
-                'created_at': subscription.created,  # Account creation date (timestamp)
-                'renew_at': subscription.current_period_end,  # Renewal date (timestamp)
+                'account_creation_date': datetime.datetime.fromtimestamp(subscription.created),  # Account creation date (timestamp)
+                'renew_date': datetime.datetime.fromtimestamp(subscription.current_period_end),  # Renewal date (timestamp)
                 'transaction_fee': subscription.application_fee_percent if subscription.application_fee_percent else 0,  # Transaction fee (if applicable)
                 'description': subscription.description if subscription.description else '',  # Subscription description
                 'currency': stripe_session.currency,  # Currency
