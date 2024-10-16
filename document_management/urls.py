@@ -10,5 +10,6 @@ urlpatterns = [
     path("documenttype/",CreateRetrieveUpdateDocumentType.as_view(), name="documenttype"),
     path("documenttype/<int:id>",CreateRetrieveUpdateDocumentType.as_view(), name="documenttype"),
     path("documentdetail/",CreateRetrieveUpdateDocumentDetail.as_view(),name="documentdetail"),
-    path("documenttypes-loan/",ListDocumentTypeForLoan.as_view(),name="documenttypes-loan")
+    path("documenttypes-loan/",ListDocumentTypeForLoan.as_view(),name="documenttypes-loan"),
+    path("documenttypes-retrieve/",RetrieveDocuments.as_view(),name="documenttypes-get")
 ]
