@@ -202,6 +202,16 @@ class Budget(APIView):
         data = request.data
         
         data['loan'] = data['loan_id'] 
+        original_loan_budget = float(data.get('original_loan_budget'))
+        adjustments = float(data.get('adjustments'))
+        equity_budget = float(data.get('equity_budget'))
+
+        revised_budget = original_loan_budget + adjustments
+        loan_budget = (original_loan_budget + adjustments) - equity_budget
+
+        data['revised_budget'] = revised_budget
+        data['loan_budget'] = loan_budget
+
         serializer = BudgetMasterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
