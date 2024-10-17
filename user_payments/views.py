@@ -9,6 +9,7 @@ from core import *
 from .serializers import *
 from django.utils import timezone
 import datetime
+from users.permissions import subscription
 # from user_payments.helper_functions import payment_status
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -20,10 +21,21 @@ class CreateCheckoutSession(APIView):
         input_json = request.data
         tier = input_json.get('tier')
         price_id = input_json.get('price_id')
+        price_dict = stripe.Price.retrieve(price_id)
+        product_id = price_dict.get('product')
+        product_dict = stripe.Product.retrieve(product_id)
+        tier = product_dict.get('name')
         #localhost = http://localhost:5173
         #localhost = https://glasdex.com
         # Creating Stripe Checkout session
         try:
+            subscription_data = {}            
+            # Customize for Trial tier
+            if tier == 'Trial':
+                subscription_data={
+                    "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
+                    "trial_period_days": 30,
+                }
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[{
@@ -31,11 +43,8 @@ class CreateCheckoutSession(APIView):
                     'quantity': 1,
                 }],
                 mode='subscription',
-                # subscription_data={
-                #     "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
-                #     "trial_period_days": 30,
-                # },
-                payment_method_collection="if_required",
+                subscription_data = subscription_data,
+                payment_method_collection="if_required" if tier == 'Trial' else "always",
                 success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
                 cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
@@ -106,12 +115,23 @@ class ProductList(APIView):
     def get(self,request):
         product_list = stripe.Product.list()
         price_list = stripe.Price.list()
-        for product in product_list:
-            for price in price_list:
-                if product['id'] == price['product']:
-                    product["unit_amount"] = price['unit_amount']
-                    product['currency'] = price['currency']
-        return Response(product_list,status=status.HTTP_200_OK)
+        print(request.user, list(Payments.objects.values_list('user_id',flat=True)))
+        if request.user.id in list(Payments.objects.values_list('user_id',flat=True)) :
+            for product in product_list:
+                for price in price_list:
+                    if product['id'] == price['product']:
+                        product["unit_amount"] = price['unit_amount']
+                        product['currency'] = price['currency']
+            product_list = [i for i in product_list if i.name != 'Trial']
+            return Response(product_list,status=status.HTTP_200_OK)
+        
+        else:
+            for product in product_list:
+                for price in price_list:
+                    if product['id'] == price['product']:
+                        product["unit_amount"] = price['unit_amount']
+                        product['currency'] = price['currency']
+            return Response(product_list,status=status.HTTP_200_OK)
 
 class PricesList(APIView):
     permission_classes = [IsAuthenticated]

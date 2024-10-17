@@ -23,10 +23,11 @@ from reportlab.lib.pagesizes import letter, landscape
 from io import BytesIO
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, PageBreak
 from reportlab.lib import colors
+from users.permissions import subscription
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get_queryset(self):
         user = self.request.user
@@ -75,7 +76,7 @@ class LoanListView(generics.ListAPIView):
 
 class LoanDisbursementScheduleDetail(generics.ListAPIView):
     serializer_class = LoanDisbursementScheduleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def get_queryset(self):
         user_loan_id = self.request.query_params.get("loan_id")
@@ -87,7 +88,7 @@ class LoanDisbursementScheduleDetail(generics.ListAPIView):
         
 class BudgetDetail(generics.ListAPIView):
     serializer_class = BudgetSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def get_queryset(self):
         input_json = self.request.query_params
@@ -101,7 +102,7 @@ class BudgetDetail(generics.ListAPIView):
 
 class UpdateDisbursementStatus(APIView):
     serializer_class = LoanDisbursementScheduleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_param = request.data
@@ -141,7 +142,7 @@ class UpdateDisbursementStatus(APIView):
         
 
 class ReturnStatusMapping(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def get(self,request):
         input_params = request.query_params
@@ -165,7 +166,7 @@ class ReturnStatusMapping(APIView):
                 return Response(output)
 
 class DashboardGraph(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self, request):
         input_json = request.query_params
@@ -196,7 +197,7 @@ class DashboardGraph(APIView):
         return Response(serializer.data)
     
 class Budget(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         data = request.data
@@ -311,7 +312,7 @@ class Budget(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
             
 class BudgetSummary(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         try: 
@@ -360,7 +361,7 @@ class BudgetSummary(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 class ProjectCreateUpdateDelete(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         serializer = ProjectSerializer(data = request.data)
@@ -406,7 +407,7 @@ class ProjectCreateUpdateDelete(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 class ProjectList(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     serializer_class = ProjectSerializer
 
     def get_queryset(self):
@@ -416,7 +417,7 @@ class ProjectList(generics.ListAPIView):
         return project
     
 class CreateRetrieveUpdateLoan(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         input_json = request.data
@@ -493,7 +494,7 @@ class CreateRetrieveUpdateLoan(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
         
 class UsesListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         try:
@@ -547,7 +548,7 @@ class InsertUsesforBudgetMaster(APIView):
 
 
 class ListUsesType(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         try:
@@ -564,7 +565,7 @@ class ListUsesType(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND) 
 
 class LoanApprovalStatus(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -621,7 +622,7 @@ class LoanApprovalStatus(APIView):
 
 
 class CreateUpdateDrawRequest(APIView):
-    permission_classes = [IsAuthenticated]  
+    permission_classes = [IsAuthenticated,subscription]  
  
     def post(self, request, *args, **kwargs):
         try:
@@ -785,7 +786,7 @@ class CreateUpdateDrawRequest(APIView):
     
 
 class DrawTrackingListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     serializer_class = DrawTrackingSerializer
 
     def get_queryset(self):
@@ -794,7 +795,7 @@ class DrawTrackingListView(generics.ListAPIView):
         return DrawTracking.objects.filter(loan_id=loan_id)
     
 class RetrieveDeleteUpdateDrawTracking(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def delete(self, request, id):
         try:
@@ -814,7 +815,7 @@ class RetrieveDeleteUpdateDrawTracking(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 class DrawTrackingStatus(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -914,7 +915,7 @@ class DrawTrackingStatus(APIView):
             return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
 
 class UploadBudget(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated,subscription] 
 
     def post(self,request):
         serializer = BudgetMasterSerializer(data=request.data)
@@ -970,7 +971,7 @@ class UploadBudget(APIView):
         return Response({'message': 'Data uploaded and saved successfully'}, status=status.HTTP_201_CREATED)
     
 class RetrieveSpentToDate(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated,subscription] 
 
     def get(self,request):
         input_params = request.query_params
@@ -996,7 +997,7 @@ class RetrieveSpentToDate(APIView):
         
         
 class ExportBudgetToExcel(APIView): 
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated,subscription] 
 
     def get(self, request):
         input_params = request.query_params
