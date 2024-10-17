@@ -24,6 +24,7 @@ import base64
 from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
 from alerts.views import create_notification
+from users.permissions import subscription
 
 client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
 db = client[settings.MONGODB['NAME']]
@@ -31,7 +32,7 @@ fs = gridfs.GridFS(db)
 
 
 class DocumentManagement(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         serializer = DocumentSerializer(data=request.data)
@@ -98,7 +99,7 @@ class DocumentManagement(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
         
 class ListOfDocument(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def get(self,request):
         try:
@@ -122,7 +123,7 @@ class ListOfDocument(APIView):
             return Response(f"Error: {str(e)}",status=500)
         
 class DocSummaryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def post(self,request):
         try:
@@ -142,7 +143,7 @@ class DocSummaryView(APIView):
             return Response({"Error":str(e)},status=500)
 
 class DocumentStatus(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -193,7 +194,7 @@ class DocumentStatus(APIView):
 
         
 class CreateRetrieveUpdateDocumentType(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
  
     def post(self,request):
         try:
@@ -244,7 +245,7 @@ class CreateRetrieveUpdateDocumentType(APIView):
         
 
 class CreateRetrieveUpdateDocumentDetail(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -268,7 +269,7 @@ class CreateRetrieveUpdateDocumentDetail(APIView):
         return Response(status=status.HTTP_200_OK)
 
 class ListDocumentTypeForLoan(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     serializer_class = DocumentTypeSerializer
     
     def get_queryset(self):

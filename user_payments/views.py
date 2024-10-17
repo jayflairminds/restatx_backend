@@ -9,12 +9,13 @@ from core import *
 from .serializers import *
 from django.utils import timezone
 import datetime
+from users.permissions import subscription
 # from user_payments.helper_functions import payment_status
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class CreateCheckoutSession(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         input_json = request.data
@@ -44,7 +45,7 @@ class CreateCheckoutSession(APIView):
             return Response({'error': str(e)}, status=500)
         
 class StripeWebhook(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         payload = request.body
@@ -74,7 +75,7 @@ class StripeWebhook(APIView):
         return Response({'status': 'success'}, status=200)
 
 class CreatePaymentIntent(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         try:
@@ -101,7 +102,7 @@ class CreatePaymentIntent(APIView):
             return Response({'error': str(e)}, status=400)
     
 class ProductList(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         product_list = stripe.Product.list()
@@ -114,7 +115,7 @@ class ProductList(APIView):
         return Response(product_list,status=status.HTTP_200_OK)
 
 class PricesList(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         input_params = request.query_params
@@ -124,7 +125,7 @@ class PricesList(APIView):
         return Response(response,status=status.HTTP_200_OK) 
     
 class SavePaymentDetails(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated,subscription] 
 
     def post(self,request):
 

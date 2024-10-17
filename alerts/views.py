@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from .serializers import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-
+from users.permissions import subscription
 
 
 
@@ -25,7 +25,7 @@ def create_notification(notify_to,sender, title, message, loan,notification_type
     return notification
 
 class NotificationManager(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         input_params = request.query_params
@@ -73,7 +73,7 @@ class NotificationManager(APIView):
     
 class DeleteNotification(APIView):
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
