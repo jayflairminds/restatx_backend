@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from .serializers import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-
+from users.permissions import subscription
 
 
 
@@ -25,7 +25,7 @@ def create_notification(notify_to,sender, title, message, loan,notification_type
     return notification
 
 class NotificationManager(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def get(self,request):
         input_params = request.query_params
@@ -70,3 +70,20 @@ class NotificationManager(APIView):
         notification_instance.is_read = True
         notification_instance.save()
         return Response({'Response':'Notification has been Marked-As-Read'},status=status.HTTP_200_OK)
+    
+class DeleteNotification(APIView):
+
+    permission_classes = [IsAuthenticated,subscription]
+
+    def post(self, request):
+        input_json = request.data
+        for notification_data in input_json:
+            notification_id = notification_data.get('notification_id') 
+
+            try:
+                notification_instance = Notification.objects.get(pk=notification_id) 
+                notification_instance.delete()
+            except Notification.DoesNotExist:
+                continue
+            
+        return Response({'response': 'Notifications deleted'},status=status.HTTP_200_OK)

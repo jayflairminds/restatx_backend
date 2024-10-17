@@ -24,6 +24,7 @@ import base64
 from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
 from alerts.views import create_notification
+from users.permissions import subscription
 
 client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
 db = client[settings.MONGODB['NAME']]
@@ -31,7 +32,7 @@ fs = gridfs.GridFS(db)
 
 
 class DocumentManagement(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self,request):
         serializer = DocumentSerializer(data=request.data)
@@ -40,6 +41,7 @@ class DocumentManagement(APIView):
         if serializer.is_valid():
             pdf_file = request.FILES['pdf_file']
             file_id = fs.put(pdf_file, filename=pdf_file.name)
+            file_name = pdf_file.name
             
             document_detail= DocumentDetail.objects.get(
                 id=input_json['document_detail_id']
@@ -55,6 +57,7 @@ class DocumentManagement(APIView):
                 fs.delete(existing_file_id)
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'In Review'
+                existing_instance.file_name = file_name
                 create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')
                 create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')  
                 existing_instance.uploaded_at = datetime.datetime.now()
@@ -63,7 +66,7 @@ class DocumentManagement(APIView):
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id), status='In Review', document_detail=document_detail,uploaded_at = datetime.datetime.now())
+                serializer.save(file_id=str(file_id),status='In Review',file_name=file_name, document_detail=document_detail,uploaded_at = datetime.datetime.now())
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -96,7 +99,7 @@ class DocumentManagement(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
         
 class ListOfDocument(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def get(self,request):
         try:
@@ -120,7 +123,7 @@ class ListOfDocument(APIView):
             return Response(f"Error: {str(e)}",status=500)
         
 class DocSummaryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     
     def post(self,request):
         try:
@@ -140,7 +143,7 @@ class DocSummaryView(APIView):
             return Response({"Error":str(e)},status=500)
 
 class DocumentStatus(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -191,7 +194,7 @@ class DocumentStatus(APIView):
 
         
 class CreateRetrieveUpdateDocumentType(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
  
     def post(self,request):
         try:
@@ -242,7 +245,7 @@ class CreateRetrieveUpdateDocumentType(APIView):
         
 
 class CreateRetrieveUpdateDocumentDetail(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
 
     def post(self, request):
         input_json = request.data
@@ -266,7 +269,7 @@ class CreateRetrieveUpdateDocumentDetail(APIView):
         return Response(status=status.HTTP_200_OK)
 
 class ListDocumentTypeForLoan(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,subscription]
     serializer_class = DocumentTypeSerializer
     
     def get_queryset(self):
@@ -278,3 +281,40 @@ class ListDocumentTypeForLoan(generics.ListAPIView):
             return queryset
         except Loan.DoesNotExist:
             return Response({"error": "Loan not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+class RetrieveDocuments(APIView):
+
+    permission_classes = [IsAuthenticated]
+    
+    def get(self,request):
+
+        try:
+            input_param = request.query_params
+            loan_id = input_param.get('loan_id')
+            document_type_id = input_param.get('document_type_id')
+            document_status = input_param.get("document_status") 
+
+            loan = Loan.objects.get(loanid=loan_id)
+
+            document_type_details = DocumentType.objects.filter(project_type=loan.loantype).values_list('id','document_type')
+            print('doc',document_type_details)
+            document_type_id = [i[0] for i in document_type_details]
+            print(document_type_id)
+            output_dict = dict()
+            print(list(document_type_details))
+            for id,document_type in list(document_type_details):
+                print(id,document_type)
+                queryset = Document.objects.filter(loan_id=loan_id, document_detail__document_type_id=id).select_related('document_detail').order_by('document_detail__type', 'document_detail__name')
+                print(queryset)
+                output_dict[document_type] = document_detail_list_json(DocumentSerializer(queryset, many=True))
+
+            return Response({'output': output_dict})
+
+        except Loan.DoesNotExist:
+            return Response({'error': 'Loan not found'}, status=404)
+        
+        except DocumentType.DoesNotExist:
+            return Response({'error': 'No matching document type found'}, status=404)
+        
+        except Exception as e:
+            return Response(f"Error: {str(e)}", status=500)

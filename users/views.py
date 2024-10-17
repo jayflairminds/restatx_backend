@@ -32,10 +32,10 @@ class LoginView(APIView):
         user = serializer.validated_data["user"]
         _, token = AuthToken.objects.create(user)
         profile = UserProfile.objects.get(user=user)
+        
         try:
-            payment = Payments.objects.get(user=user)
-            print('payment',payment)
-            subscription_status = payment.subscription_status 
+            payment = Payments.objects.filter(user=user).order_by('-current_date').first()
+            subscription_status = payment.subscription_status if payment else "inactive"
         except Payments.DoesNotExist:
             subscription_status = "inactive"
 

@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     "doc_summary_qna",
     "document_management",
     "alerts",
-    "user_payments"
+    # "user_payments",
+    "user_payments.apps.UserPaymentsConfig"
 ]
 
 MIDDLEWARE = [

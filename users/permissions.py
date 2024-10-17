@@ -4,15 +4,21 @@ from user_payments.models import *
 from construction.models import *
 
 
-class LoanCreationLimitExceeded(BasePermission):
+class subscription(BasePermission):
 
     def has_permission(self, request, view):
         user = request.user
         if not user.is_authenticated:
             return False
-        loan_count = len(Loan.objects.filter(borrower=user.id).all())
-        # permission_obj = permissions_master.objects.get(Payment.tier)
-        permission_obj = 0
-        if Payments.tier == permission_obj  and loan_count <= permission_obj.count:
-            return True
-        
+        try:
+            payment = Payments.objects.filter(user=user).order_by('-current_date').first()
+            subscription_status = payment.subscription_status if payment else "inactive"
+            match subscription_status:
+                case 'active'| "trial":
+                    return True
+                case 'inactive':
+                    return False
+                case _:
+                    return False
+        except Payments.DoesNotExist:
+            return False

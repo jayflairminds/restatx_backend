@@ -24,3 +24,4 @@ class Document(models.Model):
     file_id = models.CharField(max_length=255,null=True)
     uploaded_at = models.DateTimeField(null=True)
     status = models.CharField(max_length=100,null=True,default='Not Uploaded')
+    file_name = models.CharField(max_length=100,null=True)
