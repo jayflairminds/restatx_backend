@@ -14,7 +14,7 @@ class subscription(BasePermission):
             payment = Payments.objects.filter(user=user).order_by('-current_date').first()
             subscription_status = payment.subscription_status if payment else "inactive"
             match subscription_status:
-                case 'active'| "trial":
+                case 'active'| "trialing":
                     return True
                 case 'inactive':
                     return False
