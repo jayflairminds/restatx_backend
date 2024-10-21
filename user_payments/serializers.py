@@ -7,3 +7,8 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payments 
         fields = "__all__"
 
+class SubscriptionPlanSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = SubscriptionPlan
+        fields = "__all__"
