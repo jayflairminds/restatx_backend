@@ -1,5 +1,6 @@
 from django.db import models
-from construction.models import Loan
+from construction.models import Loan 
+from users.models import User
 
 class DocumentType(models.Model):
     id = models.AutoField(primary_key=True)
@@ -25,3 +26,10 @@ class Document(models.Model):
     uploaded_at = models.DateTimeField(null=True)
     status = models.CharField(max_length=100,null=True,default='Not Uploaded')
     file_name = models.CharField(max_length=100,null=True)
+
+
+class Feedback(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User,on_delete=models.CASCADE,null=True)
+    Document = models.ForeignKey(Document,on_delete=models.CASCADE,null=True) 
+    created_at = models.DateTimeField(null=True,blank=True)
