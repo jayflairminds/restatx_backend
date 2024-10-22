@@ -25,6 +25,7 @@ from doc_summary_qna.doc_processing import *
 from doc_summary_qna.prompts import *
 from alerts.views import create_notification
 from users.permissions import subscription
+from django.utils import timezone
 
 client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
 db = client[settings.MONGODB['NAME']]
@@ -317,4 +318,55 @@ class RetrieveDocuments(APIView):
             return Response({'error': 'No matching document type found'}, status=404)
         
         except Exception as e:
-            return Response(f"Error: {str(e)}", status=500)
+            return Response(f"Error: {str(e)}", status=500) 
+        
+class FeedbackView(APIView):
+
+    permission_classes = [IsAuthenticated] 
+
+    def post(self,request):
+
+        data = request.data 
+        document_id = data.get('document_id')
+        comment = data.get('comment') 
+        user = request.user 
+
+        if not document_id:
+            return Response({'message':f'{document_id} is required'},status=status.HTTP_404_NOT_FOUND) 
+        
+        try:
+            document = Document.objects.get(pk=document_id)
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found"}, status=status.HTTP_404_NOT_FOUND) 
+        
+        feedback = Feedback(user=user,document=document,comment=comment,created_at=timezone.now())
+        
+        serializer = FeedbackSerializer(data=feedback)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self,request):
+
+        input_params = request.query_params 
+        document_id = input_params.get('document_id') 
+
+        if not document_id:
+            return Response({"message":"document id required"},status=status.HTTP_404_NOT_FOUND) 
+
+        try:
+             feedbacks = Feedback.objects.filter(document_id=document_id).select_related('user__user_profile').order_by('-created_at')
+        except Feedback.DoesNotExist:
+             return Response({"error": "Document id not found"}, status=status.HTTP_404_NOT_FOUND) 
+        response_data = []
+        for feedback in feedbacks:
+            response_data.append({
+                'id': feedback.id,
+                'user': feedback.user.id,
+                'document': feedback.document.id,
+                'created_at': feedback.created_at,
+                'comment': feedback.comment,
+                'role_type': feedback.user.user_profile.role_type if hasattr(feedback.user, 'user_profile') else None,
+            })
+        return Response(response_data, status=status.HTTP_200_OK)
