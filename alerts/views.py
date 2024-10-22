@@ -77,13 +77,10 @@ class DeleteNotification(APIView):
 
     def post(self, request):
         input_json = request.data
-        for notification_data in input_json:
-            notification_id = notification_data.get('notification_id') 
-
-            try:
-                notification_instance = Notification.objects.get(pk=notification_id) 
-                notification_instance.delete()
-            except Notification.DoesNotExist:
-                continue
+        
+        notification_id = [notification_data.get('notification_id') for notification_data in input_json]
+        
+        notification_instance = Notification.objects.filter(pk__in=notification_id) 
+        notification_instance.delete()
             
         return Response({'response': 'Notifications deleted'},status=status.HTTP_200_OK)
