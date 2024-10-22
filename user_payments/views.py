@@ -261,13 +261,15 @@ class CreateDeleteProduct(APIView):
             return Response({"message": f"Product {product_id} deactivated successfully"}, status=200)
            
 
-class InsertDeleteRetrieveSubscription(APIView):
+class InsertDeleteRetrieveUpdateSubscription(APIView):
 
     permission_classes = [IsAuthenticated] 
 
     def post(self,request):
 
-        data = request.data 
+        data = request.data
+        data['created_at'] = timezone.now()
+        data['updated_at'] = timezone.now()
         serializer = SubscriptionPlanSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -286,16 +288,32 @@ class InsertDeleteRetrieveSubscription(APIView):
     def get(self,request):
 
         input_params = request.query_params
-        tier = input_params.get('tier')
-        loan_count = input_params.get('loan_count') 
-
-        if not tier:
-            return Response({'error':"tier is required"},status=status.HTTP_400_BAD_REQUEST)
+        tier = input_params.get('tier') 
         
-        if not loan_count:
-            return Response({'error':"loan_count is required"},status=status.HTTP_400_BAD_REQUEST) 
-        
-        my_instance = SubscriptionPlan.objects.get(tier=tier,loan_count=loan_count)
 
-        serializer = SubscriptionPlanSerializer(my_instance)
-        return Response(serializer.data,status=201)
+        if tier:
+             if SubscriptionPlan.objects.filter(tier=tier).exists():
+                my_instance = SubscriptionPlan.objects.get(tier=tier)
+                serializer = SubscriptionPlanSerializer(my_instance)
+             else:
+                 return Response({"error": f"No subscription plan found for tier: {tier}"},status=status.HTTP_404_NOT_FOUND)
+        else:
+            my_instance = SubscriptionPlan.objects.all()
+            serializer = SubscriptionPlanSerializer(my_instance,many=True)
+
+        return Response(serializer.data,status=201) 
+    
+    def put(self,request,id):
+
+        try:
+            my_instance = SubscriptionPlan.objects.get(pk=id) 
+        except SubscriptionPlan.DoesNotExist:
+            return Response({"error": "Subscription plan not found"}, status=status.HTTP_404_NOT_FOUND) 
+        
+        data = request.data 
+        data['updated_at'] = timezone.now() 
+        serializer = SubscriptionPlanSerializer(my_instance,data=data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
