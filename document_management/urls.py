@@ -11,5 +11,7 @@ urlpatterns = [
     path("documenttype/<int:id>",CreateRetrieveUpdateDocumentType.as_view(), name="documenttype"),
     path("documentdetail/",CreateRetrieveUpdateDocumentDetail.as_view(),name="documentdetail"),
     path("documenttypes-loan/",ListDocumentTypeForLoan.as_view(),name="documenttypes-loan"),
-    path("documenttypes-retrieve/",RetrieveDocuments.as_view(),name="documenttypes-get")
+    path("documenttypes-retrieve/",RetrieveDocuments.as_view(),name="documenttypes-get"),
+    path("insert-comment/",FeedbackView.as_view(),name="insert-comment"),
+    path("retrieve-comment/",FeedbackView.as_view(),name="retrieve-comment")
 ]

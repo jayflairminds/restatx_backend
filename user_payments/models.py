@@ -27,3 +27,4 @@ class SubscriptionPlan(models.Model):
     loan_count = models.IntegerField()
     created_at = models.DateTimeField(null=True,blank=True)
     updated_at = models.DateTimeField(null=True,blank=True)
+    is_active = models.BooleanField()

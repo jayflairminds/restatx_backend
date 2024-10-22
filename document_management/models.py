@@ -31,5 +31,6 @@ class Document(models.Model):
 class Feedback(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User,on_delete=models.CASCADE,null=True)
-    Document = models.ForeignKey(Document,on_delete=models.CASCADE,null=True) 
+    document = models.ForeignKey(Document,on_delete=models.CASCADE,null=True) 
     created_at = models.DateTimeField(null=True,blank=True)
+    comment = models.CharField(max_length=255)
