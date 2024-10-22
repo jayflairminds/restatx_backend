@@ -23,7 +23,7 @@ from reportlab.lib.pagesizes import letter, landscape
 from io import BytesIO
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, PageBreak
 from reportlab.lib import colors
-from users.permissions import subscription
+from users.permissions import subscription,subscriptionlimit
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
