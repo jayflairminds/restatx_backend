@@ -1,6 +1,7 @@
 from django.db import models
 from construction.models import Loan 
 from users.models import User
+from construction.models import DrawTracking
 
 class DocumentType(models.Model):
     id = models.AutoField(primary_key=True)
@@ -34,3 +35,16 @@ class Feedback(models.Model):
     document = models.ForeignKey(Document,on_delete=models.CASCADE,null=True) 
     created_at = models.DateTimeField(null=True,blank=True)
     comment = models.CharField(max_length=255)
+
+class DrawDocuments(models.Model):
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User,on_delete=models.CASCADE,null=True)
+    doc_name = models.CharField(max_length=100,null=True)
+    file_name = models.CharField(max_length=100,null=True)
+    file_id = models.CharField(max_length=255,null=True)
+    uploaded_at = models.DateTimeField(null=True)
+    status = models.CharField(max_length=100,null=True,default='Not Uploaded')
+    draw_tracking = models.ForeignKey(DrawTracking,on_delete=models.CASCADE,null=True)
+
+    def __str__(self):
+        return f"Draw Documents ID {self.id}"

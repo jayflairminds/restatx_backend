@@ -20,3 +20,8 @@ class FeedbackSerializer(serializers.ModelSerializer):
     class Meta:
         model = Feedback
         fields = "__all__"
+
+class DrawDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrawDocuments
+        fields = "__all__" 
