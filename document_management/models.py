@@ -27,6 +27,7 @@ class Document(models.Model):
     uploaded_at = models.DateTimeField(null=True)
     status = models.CharField(max_length=100,null=True,default='Not Uploaded')
     file_name = models.CharField(max_length=100,null=True)
+    summary = models.JSONField(null=True, blank=True)
 
 
 class Feedback(models.Model):
