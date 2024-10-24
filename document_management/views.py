@@ -44,7 +44,8 @@ class DocumentManagement(APIView):
 
         if serializer.is_valid():
             pdf_file = request.FILES['pdf_file']
-            file_id = fs.put(pdf_file, filename=pdf_file.name)
+            pdf_file_data = pdf_file.read()
+            file_id = fs.put(pdf_file_data, filename=pdf_file.name)
             file_name = pdf_file.name
             
             document_detail= DocumentDetail.objects.get(
@@ -66,7 +67,7 @@ class DocumentManagement(APIView):
                 create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')
                 create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')  
                 if pdf_file.name.endswith('.pdf'):
-                    summary_response = generate_summary_and_store(pdf_file, existing_instance)
+                    summary_response = generate_summary_and_store(pdf_file_data, existing_instance)
                     existing_instance.summary = summary_response
                 else:
                     existing_instance.summary = {"response": "Summary can only be generated for pdf file"}
