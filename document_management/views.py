@@ -9,7 +9,7 @@ from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Loan
-from .helper_function import document_detail_list_json
+from .helper_function import document_detail_list_json,generate_summary_and_store
 import datetime
 import json
 from django.db.models import Max,Sum,Q
@@ -62,15 +62,26 @@ class DocumentManagement(APIView):
                 existing_instance.file_id = str(file_id)
                 existing_instance.status = 'In Review'
                 existing_instance.file_name = file_name
+                existing_instance.uploaded_at = datetime.datetime.now()
                 create_notification(loan_obj.inspector, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')
                 create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has submitted a {document_detail.name} document.",loan=loan_obj,notification_type= 'AL')  
-                existing_instance.uploaded_at = datetime.datetime.now()
+                if pdf_file.name.endswith('.pdf'):
+                    summary_response = generate_summary_and_store(pdf_file, existing_instance)
+                    existing_instance.summary = summary_response
+                else:
+                    existing_instance.summary = {"response": "Summary can only be generated for pdf file"}
                 existing_instance.save()
                 serializer = DocumentSerializer(existing_instance)
                 return Response(serializer.data,status=status.HTTP_201_CREATED)
             else:
                 
-                serializer.save(file_id=str(file_id),status='In Review',file_name=file_name, document_detail=document_detail,uploaded_at = datetime.datetime.now())
+                document_instance = serializer.save(file_id=str(file_id),status='In Review',file_name=file_name, document_detail=document_detail,uploaded_at = datetime.datetime.now())
+                if pdf_file.name.endswith('.pdf'):
+                    summary_response = generate_summary_and_store(pdf_file, document_instance)
+                    document_instance.summary = summary_response  # Save summary to the new instance
+                else:
+                    document_instance.summary = {"response": "Summary can only be generated for pdf file"}
+                document_instance.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -342,7 +353,12 @@ class FeedbackView(APIView):
         except Document.DoesNotExist:
             return Response({"error": "Document not found"}, status=status.HTTP_404_NOT_FOUND) 
         
-        feedback = Feedback(user=user,document=document,comment=comment,created_at=timezone.now())
+        feedback = {
+        'user': user.id,  # assuming you want to save the user's ID
+        'document': document.id,
+        'comment': comment,
+        'created_at': timezone.now()
+    }
         
         serializer = FeedbackSerializer(data=feedback)
         if serializer.is_valid():
@@ -372,7 +388,22 @@ class FeedbackView(APIView):
                 'comment': feedback.comment,
                 'role_type': feedback.user.user_profile.role_type if hasattr(feedback.user, 'user_profile') else None,
             })
-        return Response(response_data, status=status.HTTP_200_OK)
+        return Response(response_data, status=status.HTTP_200_OK) 
+
+
+
+    
+class RetrieveSummary(APIView):
+
+    permission_classes = [IsAuthenticated,subscription] 
+
+    def get(self,request):
+        input_params = request.query_params 
+        id = input_params.get('id') 
+
+        my_instance = Document.objects.get(pk=id)
+        serializer = DocumentSerializer(my_instance)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 class DrawRequestDocuments(APIView):
