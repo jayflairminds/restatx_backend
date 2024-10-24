@@ -17,5 +17,6 @@ urlpatterns = [
     path("retrieve-summary/",RetrieveSummary.as_view(),name="retrieve-summary"),
     path("draw-document/",DrawRequestDocuments.as_view(),name="draw-document"),
     path("draw-document/<int:id>",DrawRequestDocuments.as_view(),name="update-delete-draw-document"),
-    path("list-draw-documents/",ListDrawDocuments.as_view(),name="list-draw-documents")
+    path("list-draw-documents/",ListDrawDocuments.as_view(),name="list-draw-documents"),
+    path("draw-document-status/",DrawDocumentStatus.as_view(),name="draw-document-status")
 ]
