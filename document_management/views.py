@@ -514,3 +514,49 @@ class ListDrawDocuments(APIView):
             queryset = queryset.filter(status=document_status)
         serializers = DrawDocumentsSerializer(queryset,many=True)
         return Response(serializers.data,status=status.HTTP_200_OK)
+    
+class DrawDocumentStatus(APIView):
+    permission_classes = [IsAuthenticated,subscription]
+
+    def post(self, request):
+        input_json = request.data
+        status_action = input_json.get('status_action')
+        draw_document_id = input_json.get('draw_document_id')
+
+        try:
+            my_instance = DrawDocuments.objects.get(pk=draw_document_id)
+        except Document.DoesNotExist:
+            return Response({'error': 'Document not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # loan_obj = Loan.objects.get(pk=my_instance.loan_id)
+        # document_detail_obj = DocumentDetail.objects.get(pk=my_instance.document_detail_id)
+        user = request.user
+        profile = UserProfile.objects.get(user=user)
+
+        update_status = None
+        print(profile.role_type, my_instance.status)
+        if profile.role_type == "inspector" and my_instance.status == "In Review":
+            if status_action == "Approve":
+                update_status = "Pending Lender"
+                # create_notification(loan_obj.borrower, request.user,"Document Management", f"{request.user.username} has submitted the {document_detail_obj.name} document for approval to the lender.",loan=loan_obj,notification_type= 'IN')
+                # create_notification(loan_obj.lender, request.user,"Document Management", f"{request.user.username} has done the verified the {document_detail_obj.name} document and sent for approval to you.",loan=loan_obj,notification_type= 'AL')  
+
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                # create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected.",loan=loan_obj,notification_type= 'WA')
+
+        elif profile.role_type == "lender" and my_instance.status == "Pending Lender":
+            if status_action == "Approve":
+                update_status = "Approved"
+                # create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been Approved.",loan=loan_obj,notification_type= 'SU')
+
+            elif status_action == "Reject":
+                update_status = "Rejected"
+                # create_notification(loan_obj.borrower, request.user,"Document Management", f"{document_detail_obj.name} document  for Loan ID :{loan_obj.loanid} has been rejected by lender.",loan=loan_obj,notification_type= 'WA')
+
+        if update_status:
+            my_instance.status = update_status
+            my_instance.save(update_fields=['status'])
+            return Response({"Response":"Status Updated"},status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Invalid action or role'}, status=status.HTTP_400_BAD_REQUEST)
