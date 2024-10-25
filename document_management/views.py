@@ -403,8 +403,8 @@ class RetrieveSummary(APIView):
         id = input_params.get('id') 
 
         my_instance = Document.objects.get(pk=id)
-        serializer = DocumentSerializer(my_instance)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        my_instance.summary
+        return Response({"summary":my_instance.summary}, status=status.HTTP_200_OK)
     
 
 class DrawRequestDocuments(APIView):
@@ -462,7 +462,7 @@ class DrawRequestDocuments(APIView):
                 response = FileResponse(file, content_type=mime_type)
                 response['Content-Disposition'] = f'attachment; filename="{file.filename}"'
                 return response
-            elif output_type and output_type.lower() == "file":
+            elif output_type and output_type.lower() == "json":
                 # Base64 encode the file for returning as JSON
                 pdf_data = base64.b64encode(file.read()).decode('utf-8')
                 return JsonResponse({'pdf_base64': pdf_data})
@@ -501,21 +501,25 @@ class ListDrawDocuments(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self,request):
-        input_params = request.query_params
-        loan_id = input_params.get('loan_id')
-        draw_request = input_params.get('draw_request')
-        document_status = input_params.get('status')
-        if not draw_request:
-            return Response({'response':'draw request is a mandatory params'},status=status.HTTP_400_BAD_REQUEST)
-        if not loan_id:
-            return Response({'response':'loan_id is a mandatory params'},status=status.HTTP_400_BAD_REQUEST)
-        draw_tracking = DrawTracking.objects.get(loan_id= loan_id,draw_request=draw_request)
-        queryset = DrawDocuments.objects.filter(draw_tracking_id=draw_tracking.id)
-        if document_status:
-            queryset = queryset.filter(status=document_status)
-        serializers = DrawDocumentsSerializer(queryset,many=True)
-        return Response(serializers.data,status=status.HTTP_200_OK)
-    
+        try:
+            input_params = request.query_params
+            loan_id = input_params.get('loan_id')
+            draw_request = input_params.get('draw_request')
+            document_status = input_params.get('status')
+            if not draw_request:
+                return Response({'response':'draw request is a mandatory params'},status=status.HTTP_400_BAD_REQUEST)
+            if not loan_id:
+                return Response({'response':'loan_id is a mandatory params'},status=status.HTTP_400_BAD_REQUEST)
+            draw_tracking = DrawTracking.objects.get(loan_id= loan_id,draw_request=draw_request)
+            queryset = DrawDocuments.objects.filter(draw_tracking_id=draw_tracking.id)
+            if document_status:
+                queryset = queryset.filter(status=document_status)
+            serializers = DrawDocumentsSerializer(queryset,many=True)
+            return Response(serializers.data,status=status.HTTP_200_OK)
+        except DrawTracking.DoesNotExist:
+            return Response({"response":"No Draws Available for this Loan"},status=status.HTTP_404_NOT_FOUND)
+        
+        
 class DrawDocumentStatus(APIView):
     permission_classes = [IsAuthenticated,subscription]
 
