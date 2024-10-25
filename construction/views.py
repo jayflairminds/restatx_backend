@@ -23,7 +23,7 @@ from reportlab.lib.pagesizes import letter, landscape
 from io import BytesIO
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, PageBreak
 from reportlab.lib import colors
-from users.permissions import subscription
+from users.permissions import subscription,subscriptionlimit
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
@@ -943,10 +943,10 @@ class UploadBudget(APIView):
             if column not in df.columns:
                 return Response({'response':f"{column} not present"},status=status.HTTP_404_NOT_FOUND)
         df = df.fillna(0)
-        if 'revised budget' not in df.columns:
-            df['revised budget'] = df['original loan budget'] + df['adjustments']  
-        if 'loan budget' not in df.columns:
-            df['loan budget'] = df['original loan budget'] + df['adjustments']- df['equity budget'] 
+        # if 'revised budget' not in df.columns:
+        df['revised budget'] = df['original loan budget'] + df['adjustments']  
+        # if 'loan budget' not in df.columns:
+        df['loan budget'] = df['original loan budget'] + df['adjustments']- df['equity budget'] 
         
         budget_instances = []
 

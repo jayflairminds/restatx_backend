@@ -194,3 +194,126 @@ class SavePaymentDetails(APIView):
         
         except stripe.error.StripeError as e:
              return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+# Currently this API is not in use -- As this would require more parameters and clarity on product creation.    
+class CreateDeleteProduct(APIView):
+
+    permission_classes = [IsAuthenticated] 
+
+    def post(self,request):
+        
+      
+        name = request.data.get('name')
+        description = request.data.get('description', None)
+        price = request.data.get('price')
+        currency = request.data.get('currency')
+    
+        if not name or not price:
+            return Response({"error": "Name and price are required fields"}, status=400)
+        
+        # # Convert price to cents
+        # price_in_cents = int(float(price) * 100) 
+
+        try:
+             # Create the product in Stripe
+            product = stripe.Product.create(
+                name=name,
+                active=True,
+                shippable=False,
+                unit_label="subscription",
+                images = [],
+                metadata= {},
+                url = None,
+                
+            )
+
+             # Create the price for the product
+            price_obj = stripe.Price.create(
+                product=product.id,
+                unit_amount=price,  # price in cents
+                currency='usd',
+                recurring={"interval": "month"},  # for monthly subscription
+
+            ) 
+
+            return Response({
+                "message": "Product created successfully",
+                "product_id": product.id,
+                "price_id": price_obj.id,
+                "product_name": product.name,
+                "default_price":price_obj.id,
+                "price_amount": price_obj.unit_amount,  # Convert back to dollars
+            }, status=201)
+        
+        except stripe.error.StripeError as e:
+            return Response({"error": str(e)}, status=400)
+
+    # Product cannot be deleted as stripe doesn't allow it,products can only be archived as prices are associated with it.
+    def delete(self,request,product_id):
+
+        # try:
+            print(f"Attempting to delete product with ID: {product_id}")
+            print(stripe.Product.retrieve(product_id))
+                    # Deactivate the product
+            stripe.Product.modify(product_id, active=False)
+            stripe.Product.delete(product_id)
+        
+            return Response({"message": f"Product {product_id} deactivated successfully"}, status=200)
+           
+
+class InsertDeleteRetrieveUpdateSubscription(APIView):
+
+    permission_classes = [IsAuthenticated] 
+
+    def post(self,request):
+
+        data = request.data
+        data['created_at'] = timezone.now()
+        data['updated_at'] = timezone.now()
+        serializer = SubscriptionPlanSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED) 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self,request,id):
+
+        if not id:
+            return Response({"message":"id is required"},status=status.HTTP_400_BAD_REQUEST)
+        
+        my_instance = SubscriptionPlan.objects.get(id=id)
+        my_instance.delete()
+        return Response({"message": f"record {id} deleted successfully"}, status=200) 
+    
+    def get(self,request):
+
+        input_params = request.query_params
+        tier = input_params.get('tier') 
+        
+
+        if tier:
+             if SubscriptionPlan.objects.filter(tier=tier).exists():
+                my_instance = SubscriptionPlan.objects.get(tier=tier)
+                serializer = SubscriptionPlanSerializer(my_instance)
+             else:
+                 return Response({"error": f"No subscription plan found for tier: {tier}"},status=status.HTTP_404_NOT_FOUND)
+        else:
+            my_instance = SubscriptionPlan.objects.all()
+            serializer = SubscriptionPlanSerializer(my_instance,many=True)
+
+        return Response(serializer.data,status=201) 
+    
+    def put(self,request,id):
+
+        try:
+            my_instance = SubscriptionPlan.objects.get(pk=id) 
+        except SubscriptionPlan.DoesNotExist:
+            return Response({"error": "Subscription plan not found"}, status=status.HTTP_404_NOT_FOUND) 
+        
+        data = request.data 
+        data['updated_at'] = timezone.now() 
+        serializer = SubscriptionPlanSerializer(my_instance,data=data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -12,4 +12,16 @@ class DocumentSerializer(serializers.ModelSerializer):
 class DocumentTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentType
+        fields = "__all__" 
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    role_type = serializers.CharField(source="user.username",read_only=True)
+    
+    class Meta:
+        model = Feedback
         fields = "__all__"
+
+class DrawDocumentsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrawDocuments
+        fields = "__all__" 
