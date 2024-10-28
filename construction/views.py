@@ -1086,10 +1086,23 @@ class ExportBudgetToExcel(APIView):
 
 
         else:
-            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            # response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            # response['Content-Disposition'] = f'attachment; filename="budget_data_loan_{loan_id}.xlsx"'
+
+            # with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
+            #     df.to_excel(writer, index=False)
+
+            # return response
+            buffer = BytesIO() 
+
+             # Write the DataFrame to Excel using ExcelWriter and BytesIO
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False)
+                
+
+             # Set the correct position of the buffer to the beginning
+            buffer.seek(0) 
+            response = HttpResponse(buffer,content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             response['Content-Disposition'] = f'attachment; filename="budget_data_loan_{loan_id}.xlsx"'
-
-            with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
-                df.to_excel(writer, index=False, sheet_name='BudgetData')
-
             return response
+
