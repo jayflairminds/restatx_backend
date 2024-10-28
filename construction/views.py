@@ -792,7 +792,7 @@ class DrawTrackingListView(generics.ListAPIView):
     def get_queryset(self):
         input_params = self.request.query_params
         loan_id = input_params.get("loan_id")
-        return DrawTracking.objects.filter(loan_id=loan_id)
+        return DrawTracking.objects.filter(loan_id=loan_id).order_by('draw_request')
     
 class RetrieveDeleteUpdateDrawTracking(APIView):
     permission_classes = [IsAuthenticated,subscription]
