@@ -11,11 +11,19 @@ from io import BytesIO
 
 load_dotenv()
 
-def get_pdf_text(pdf_content):
+def get_pdf_text_doc_manager(pdf_content):
     text = ""
     pdf_file = BytesIO(pdf_content)
 
     pdf_reader = PdfReader(pdf_file)
+    for page in pdf_reader.pages:
+        text += page.extract_text()
+    return text
+
+def get_pdf_text(pdf_content):
+    text = ""
+    pdf_file = BytesIO(pdf_content.read())
+    pdf_reader = PdfReader(stream=pdf_file)
     for page in pdf_reader.pages:
         text += page.extract_text()
     return text

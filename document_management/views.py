@@ -147,7 +147,7 @@ class DocSummaryView(APIView):
             file_id = ObjectId(file_id)
             file = fs.get(file_id)
             # text extraction
-            text = get_pdf_text(file) 
+            text = get_pdf_text_doc_manager(file) 
             # creating text chunks
             chunks = get_text_chunks(text)
             # creating vector store and storing it 
