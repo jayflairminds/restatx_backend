@@ -16,7 +16,7 @@ import os
 from django.db.models import Max,Sum
 from django.utils import timezone
 from alerts.views import create_notification
-from construction.helper_functions import disbursement_schedule ,construction_expenditure
+from construction.helper_functions import disbursement_schedule ,construction_expenditure, contingency_status
 from django.http import HttpResponse
 import pandas as pd
 from reportlab.lib.pagesizes import letter, landscape
@@ -177,6 +177,7 @@ class DashboardGraph(APIView):
             case 'contingency_status_graph':
                 queryset = ContingencyStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ContingencyStatusSerializer(queryset, many=True)
+                return Response({"Response":contingency_status(loan_id)})
             case 'schedule_status_graph':
                 queryset = ScheduleStatus.objects.filter(loan_id =loan_id).order_by('review_months')
                 serializer = ScheduleStatusSerializer(queryset, many=True)
@@ -318,7 +319,7 @@ class BudgetSummary(APIView):
         try: 
             input_param = request.query_params
             loan_id = input_param.get('loan_id')
-            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type','total_funded_percentage').annotate(total_original_loan_budget=Sum('original_loan_budget'),
+            queryset = BudgetMaster.objects.filter(loan_id = loan_id).values('uses_type').annotate(total_original_loan_budget=Sum('original_loan_budget'),
                                                                         total_adjustments= Sum('adjustments'),
                                                                         total_revised_budget= Sum('revised_budget'),
                                                                         total_equity_budget= Sum('equity_budget'),                           
@@ -666,7 +667,7 @@ class CreateUpdateDrawRequest(APIView):
                     released_amount_previous = DrawRequest.objects.filter(budget_master_id=obj).values_list('released_amount',flat=True)        
                     released_amount_list = list(released_amount_previous)
                     if released_amount_list:
-                        released_amount=released_amount_list[0]
+                        released_amount=max(released_amount_list)
                     else:
                         released_amount = 0
                     
