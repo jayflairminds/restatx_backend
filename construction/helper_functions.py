@@ -57,3 +57,41 @@ def construction_expenditure(loan_id):
                 expenditure_dict['uses'] = uses
                 expenditure_lis.append(expenditure_dict)
     return expenditure_lis
+
+def contingency_status(loan_id):
+    draw_request_obj_lis =  DrawRequest.objects.filter(budget_master_id__loan_id=loan_id,budget_master_id__uses_type='hard_cost').order_by('draw_request')
+    total_hard_cost = BudgetMaster.objects.filter(loan_id=loan_id,uses_type='hard_cost').aggregate(Sum('loan_budget'))
+    if total_hard_cost:
+        total_hard_cost = total_hard_cost.get('loan_budget__sum')
+    else:
+        total_hard_cost = 0
+
+    try:
+        total_owner_contingency = BudgetMaster.objects.get(loan_id=loan_id,uses_type='hard_cost',uses='Owner Contingency')
+        owner_contingency_loan_budget = float(total_owner_contingency.loan_budget)
+    except BudgetMaster.DoesNotExist:
+        owner_contingency_loan_budget = 0
+    try:    
+        owner_contingency = BudgetMaster.objects.get(loan_id=loan_id,uses='Owner Contingency')
+        owner_contingency_id = owner_contingency.id
+    except BudgetMaster.DoesNotExist:
+        owner_contingency_id = None
+
+    total_released_hard_cost_per_draw = DrawRequest.objects.filter(
+        budget_master_id__loan_id=loan_id, 
+        budget_master_id__uses_type='hard_cost'
+    ).values('draw_request').annotate(total_released_amount=Sum('released_amount')).order_by('draw_request')
+    output_lis = list()
+
+    for draw in draw_request_obj_lis:
+        response_dict = {}
+        for total in total_released_hard_cost_per_draw:
+            if draw.budget_master_id == owner_contingency_id:                
+                if  total['draw_request'] == draw.draw_request:
+                    response_dict['draw'] = int(draw.draw_request)
+                    response_dict['contingency'] = owner_contingency_loan_budget  - float(draw.released_amount)
+                    response_dict['contingency-percent'] =  ((owner_contingency_loan_budget - float(draw.released_amount))/total_hard_cost)*100
+                    response_dict['total-released-direct-cost'] = total['total_released_amount'] 
+                    response_dict['total-released-direct-cost-percent'] = (float(total['total_released_amount'])/total_hard_cost)*100
+                    output_lis.append(response_dict)
+    return output_lis
