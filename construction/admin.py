@@ -4,4 +4,4 @@ from construction.models import *
 
 @admin.register(Loan)
 class Loan(admin.ModelAdmin):
-    list_display = ('loanid', 'borrower', 'inspector','lender')
+    list_display = ('loanid', 'borrower','lender')

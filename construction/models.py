@@ -2,7 +2,7 @@ from django.db import models
 from users.models import User
 from django.db.models import Sum
 
-PROJECT_TYPE_CHOICES = [("residential", "Residential"), ("commercial", "Commercial")]
+PROJECT_TYPE_CHOICES = [("residential", "Residential"), ("commercial", "Commercial"),("industrial", "Industrial"),("hospitality", "Hospitality")]
 
 LOAN_STATUS = [
     ("Pending", "pending"),
@@ -13,9 +13,9 @@ LOAN_STATUS = [
 
 class Project(models.Model):
     id = models.AutoField(primary_key=True)
-    address = models.CharField(max_length=50)
+    address = models.CharField(max_length=1000)
     projectname = models.CharField(max_length=50)
-    street_address = models.CharField(max_length=50,null=True)
+    street_address = models.CharField(max_length=500,null=True)
     zip_Code = models.CharField(max_length=50,null=True)
     city = models.CharField(max_length=50,null=True)
     lot = models.CharField(max_length=50,null=True)
@@ -37,7 +37,7 @@ class Loan(models.Model):
         User, related_name="inspector", on_delete=models.SET_NULL, null = True
     )
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    loandescription = models.CharField(max_length=200)
+    loandescription = models.CharField(max_length=1000)
     loantype = models.CharField(max_length=30)
     amount = models.DecimalField(max_digits=30, decimal_places=5)
     start_date = models.DateTimeField(null=True, blank=True)
