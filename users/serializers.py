@@ -46,7 +46,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="user.username", read_only=True)
-
+    email = serializers.CharField(source="user.email", read_only=True)
     class Meta:
         model = UserProfile
         fields = "__all__"
