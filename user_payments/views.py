@@ -120,7 +120,7 @@ class ProductList(APIView):
             for product in product_list:
                 for price in price_list:
                     if product['id'] == price['product']:
-                        product["unit_amount"] = price['unit_amount']
+                        product["unit_amount"] = float(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
                         product['currency'] = price['currency']
             updated_product_list = [i for i in product_list['data'] if i.name != 'Trial']
             product_list['data'] = updated_product_list
@@ -130,7 +130,7 @@ class ProductList(APIView):
             for product in product_list:
                 for price in price_list:
                     if product['id'] == price['product']:
-                        product["unit_amount"] = price['unit_amount']
+                        product["unit_amount"] = int(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
                         product['currency'] = price['currency']
             return Response(product_list,status=status.HTTP_200_OK)
 
