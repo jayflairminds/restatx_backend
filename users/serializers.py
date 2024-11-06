@@ -16,6 +16,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role_type",
+            "is_staff"
         )
         extra_kwargs = {
             "password": {"write_only": True},
@@ -37,6 +38,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
             first_name=validated_data["first_name"],
             last_name=validated_data["last_name"],
+            is_staff=validated_data["is_staff"]
         )
         # Save the role_type to the user profile
         UserProfile.objects.create(
