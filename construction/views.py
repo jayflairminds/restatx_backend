@@ -39,6 +39,8 @@ class LoanListView(generics.ListAPIView):
                 loans = Loan.objects.filter(inspector_id=user).order_by('-loanid')
             case "borrower":
                 loans = Loan.objects.filter(borrower_id=user).order_by('-loanid')
+            case "admin":
+                loans = Loan.objects.order_by('-loanid')
 
         loans = loans.select_related("project","lender", "borrower","inspector")
         return loans
