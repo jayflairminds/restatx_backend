@@ -25,6 +25,7 @@ class SubscriptionPlan(models.Model):
     id = models.AutoField(primary_key=True)
     tier = models.CharField(max_length=20)
     loan_count = models.IntegerField()
+    risk_metrics = models.BooleanField(default=False)
     created_at = models.DateTimeField(null=True,blank=True)
     updated_at = models.DateTimeField(null=True,blank=True)
     is_active = models.BooleanField()
