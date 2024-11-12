@@ -2,6 +2,8 @@ from rest_framework.permissions import BasePermission
 from django.core.exceptions import PermissionDenied
 from user_payments.models import *
 from construction.models import *
+from users.custom_exception import CustomAPIException
+
 
 
 class subscription(BasePermission):
@@ -27,11 +29,9 @@ class subscriptionlimit(BasePermission):
     def has_permission(self, request, view):
         user = request.user
         if not user.is_authenticated:
-            self.message = 'User is not authenticated.'
-            return False
-
+            raise CustomAPIException('User is not authenticated.')
         try:
-            if request.method in ['POST']:
+            if request.method == 'POST':
                 role_type = UserProfile.objects.get(user=user).role_type
                 payment = Payments.objects.filter(user=user).order_by('-current_date').first()
                 subscription_plan = SubscriptionPlan.objects.get(tier=payment.tier)
@@ -45,12 +45,9 @@ class subscriptionlimit(BasePermission):
                 if subscription_plan.loan_count > loan_count:
                     return True
                 else:
-                    self.message = 'Subscription plan limit exceeded.'
-                    return False
+                    raise CustomAPIException('Subscription plan limit exceeded.')
 
         except Payments.DoesNotExist:
-            self.message = 'No payment information found for the user.'
-            return False
+            raise CustomAPIException('No payment information found for the user.')
         except SubscriptionPlan.DoesNotExist:
-            self.message = 'No subscription plan found for the user.'
-            return False
+            raise CustomAPIException('No subscription plan found for the user.')
