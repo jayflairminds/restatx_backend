@@ -5,5 +5,9 @@ from user_payments.models import *
 @admin.register(SubscriptionPlan)
 class SubscriptionPlan(admin.ModelAdmin):
     list_display = ('id','tier', 'loan_count','created_at','updated_at')
-    # list_editable = ("tier","loan_count")
+    list_editable = ("tier","loan_count")
     search_fields = ("tier", "loan_count")
+
+@admin.register(Payments)
+class Payments(admin.ModelAdmin):
+    list_display = [field.name for field in Payments._meta.fields]

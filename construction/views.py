@@ -420,7 +420,7 @@ class ProjectList(generics.ListAPIView):
         return project
     
 class CreateRetrieveUpdateLoan(APIView):
-    permission_classes = [IsAuthenticated,subscription]
+    permission_classes = [IsAuthenticated,subscription,subscriptionlimit]
 
     def post(self,request):
         input_json = request.data
