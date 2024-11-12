@@ -44,7 +44,7 @@ class CreateCheckoutSession(APIView):
                 }],
                 mode='subscription',
                 subscription_data = subscription_data,
-                payment_method_collection="if_required" if tier == 'Trial' else "always",
+                payment_method_collection="if_required" if tier in  ('Trial','Gremadex Trial') else "always",
                 success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
                 cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
@@ -119,19 +119,20 @@ class ProductList(APIView):
         if request.user.id in list(Payments.objects.values_list('user_id',flat=True)) :
             for product in product_list:
                 for price in price_list:
-                    if product['id'] == price['product']:
+                    if price['id'] == product['default_price']:
                         product["unit_amount"] = float(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
                         product['currency'] = price['currency']
-            updated_product_list = [i for i in product_list['data'] if i.name != 'Trial']
+            updated_product_list = [i for i in product_list['data'] if i.name not in ('Trial','Gremadex Trial')]
             product_list['data'] = updated_product_list
             return Response(product_list,status=status.HTTP_200_OK)
         
         else:
             for product in product_list:
                 for price in price_list:
-                    if product['id'] == price['product']:
+                    if price['id'] == product['default_price']:
                         product["unit_amount"] = int(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
                         product['currency'] = price['currency']
+            # product_list = sorted(product_list, key=lambda price: price['unit_amount'])
             return Response(product_list,status=status.HTTP_200_OK)
 
 class PricesList(APIView):
