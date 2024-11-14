@@ -121,7 +121,8 @@ class ProductList(APIView):
                 for price in price_list:
                     if price['id'] == product['default_price']:
                         product["unit_amount"] = float(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
-                        product['currency'] = price['currency']
+                        product['currency'] = price['currency'].upper()
+                        product['type'] = product['type'].capitalize()
             updated_product_list = [i for i in product_list['data'] if i.name not in ('Trial','Gremadex Trial')]
             product_list['data'] = updated_product_list
             return Response(product_list,status=status.HTTP_200_OK)
@@ -131,7 +132,8 @@ class ProductList(APIView):
                 for price in price_list:
                     if price['id'] == product['default_price']:
                         product["unit_amount"] = int(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
-                        product['currency'] = price['currency']
+                        product['currency'] = price['currency'].upper()
+                        product['type'] = product['type'].capitalize()
             # product_list = sorted(product_list, key=lambda price: price['unit_amount'])
             return Response(product_list,status=status.HTTP_200_OK)
 

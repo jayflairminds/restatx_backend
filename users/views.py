@@ -36,12 +36,18 @@ class LoginView(APIView):
         try:
             payment = Payments.objects.filter(user=user).order_by('-current_date').first()
             subscription_status = payment.subscription_status if payment else "inactive"
+            if payment is None:
+                raise Payments.DoesNotExist
             tier = payment.tier
             risk_metrics = SubscriptionPlan.objects.get(tier=tier).risk_metrics
         except Payments.DoesNotExist:
             subscription_status = "inactive"
+            risk_metrics = False
         except SubscriptionPlan.DoesNotExist:
             risk_metrics = False
+        
+        if profile.role_type == "admin":
+            risk_metrics = True
         
         return Response(
             {
