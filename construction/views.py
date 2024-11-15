@@ -7,7 +7,7 @@ from .models import *
 from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Loan
+from .models import Loan,UsesMapping
 from document_management.models import *
 from .serializers import *
 import datetime
@@ -510,7 +510,28 @@ class UsesListView(APIView):
 
             with open(file_path,'r') as file:
                 uses_dictionary = json.load(file)
-                response = uses_dictionary.get(project_type)
+             
+            # Get the uses list for the specified project_type from JSON
+            uses_list = uses_dictionary.get(project_type, {})
+
+            uses_mapping = UsesMapping.objects.filter(project_type=project_type)
+            
+            serialized_data = UsesMappingSerializer(uses_mapping,many=True).data
+             
+            response_data = {}
+            for item in serialized_data:
+                uses_type = item["uses_type"]
+                if uses_type not in response_data:
+                    response_data[uses_type] = []
+                 # Add the "use" and "is_locked" information to each `uses_type` group
+                response_data[uses_type].append({
+                    "use": item["uses"],
+                    "is_locked": item["is_locked"]
+                })
+
+             # Wrap the data in a response dictionary
+            response = {"response": response_data}
+
             return Response(response)
         except Loan.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND) 
@@ -1095,4 +1116,48 @@ class ExportBudgetToExcel(APIView):
             with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
                 df.to_excel(writer, index=False, sheet_name='BudgetData')
 
-            return response
+            return response 
+        
+class CreateRetrieveDeleteUsesMapping(APIView):
+
+    permission_classes = [IsAuthenticated,subscription]
+
+
+    def get(self,request):
+        input_params = request.query_params
+        project_type = input_params.get('project_type')
+        if project_type:
+            my_instance = UsesMapping.objects.filter(project_type=project_type).order_by('uses_type','uses')
+        else:           
+            my_instance = UsesMapping.objects.all().order_by('project_type','uses_type','uses')
+        serializer = UsesMappingSerializer(my_instance,many=True)
+        return Response(serializer.data,status=201) 
+    
+    def post(self, request):
+        serializer = UsesMappingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    
+    def put(self, request, id):
+        try:
+            use_mapping = UsesMapping.objects.get(pk=id)
+        except UsesMapping.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UsesMappingSerializer(use_mapping, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    
+
+    def delete(self, request, id):
+        try:
+            use_mapping = UsesMapping.objects.get(pk=id)
+        except UsesMapping.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        use_mapping.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

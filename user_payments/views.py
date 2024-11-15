@@ -377,4 +377,73 @@ class PromoCode(APIView):
             else:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST) 
+    
+class UpgradeSubscriptionView(APIView):
+    permission_classes = [IsAuthenticated, subscription]
+
+    def post(self, request):
+        # Get the subscription and new price ID from the request data
+        subscription_id = request.data.get('subscription_id')
+        new_price_id = request.data.get('new_price_id')
+
+        # Validate the input
+        if not subscription_id or not new_price_id:
+            return Response({"error": "Subscription ID and new price ID are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Retrieve the current subscription
+            subscription = stripe.Subscription.retrieve(subscription_id)
+
+            # Upgrade the subscription and apply prorated credit
+            updated_subscription = stripe.Subscription.modify(
+                subscription_id,
+                items=[{
+                    "id": subscription['items']['data'][0].id,
+                    "price": new_price_id,  # Set new plan price ID here
+                }],
+                proration_behavior="create_prorations",  # Apply remaining balance
+            )
+             # Retrieve the updated subscription to verify
+            subscription_after_update = stripe.Subscription.retrieve(subscription_id)
+
+            # Check the new price_id to confirm it's now set to Premium
+            current_price_id = subscription_after_update['items']['data'][0]['price']['id']
+            print('current_price_id',current_price_id)
+
+            # Retrieve the latest invoice, which should reflect the prorated amount
+            latest_invoice_id = updated_subscription['latest_invoice']
+            print("latest_invoice_id",latest_invoice_id)
+            latest_invoice = stripe.Invoice.retrieve(latest_invoice_id) if latest_invoice_id else None
+            print(latest_invoice.amount_due,latest_invoice.amount_paid)
+            print(latest_invoice['lines']['data'][0]['price']['id'])
+            # Check if there's a remaining balance in the latest invoice
+            if latest_invoice and latest_invoice['amount_due'] > 0:
+                # Create a checkout session to collect the remaining payment
+                session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price': latest_invoice['lines']['data'][0]['price']['id'],  # The price ID from the invoice
+                        'quantity': 1,
+                    }],
+                    mode='subscription',
+                    success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
+                    cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
+                )
+                # Return session ID to the client so they can pay the remaining amount
+                return Response({"session":session}, status=status.HTTP_200_OK)
+
+            # If no remaining balance, simply return the updated subscription
+            return Response({
+                "updated_subscription": updated_subscription,
+                "latest_invoice": latest_invoice
+            }, status=status.HTTP_200_OK)
+
+        except stripe.error.StripeError as e:
+            # Handle Stripe error
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+
+def get_subscription_details(subscription_id):
+    return stripe.Subscription.retrieve(subscription_id)
