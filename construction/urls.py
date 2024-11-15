@@ -27,5 +27,7 @@ urlpatterns = [
     path("draw-approval/",DrawTrackingStatus.as_view(),name="draw-approval"),
     path("upload-budget/",UploadBudget.as_view(),name='upload-budget'),
     path("spent-to-date/",RetrieveSpentToDate.as_view(),name="spent-to-date"),
-    path("export-budget/",ExportBudgetToExcel.as_view(),name="export-budget")
+    path("export-budget/",ExportBudgetToExcel.as_view(),name="export-budget"),
+    path("usesmapping/",CreateRetrieveDeleteUsesMapping.as_view(),name="insert-retrieve-usesmapping"),
+    path("usesmapping/<int:id>",CreateRetrieveDeleteUsesMapping.as_view(),name="update-delete-usesmapping")
 ]
