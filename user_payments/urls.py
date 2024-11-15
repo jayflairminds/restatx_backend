@@ -13,5 +13,7 @@ urlpatterns = [
     path('insert-subscription/', InsertDeleteRetrieveUpdateSubscription.as_view(), name='insert-subscription'),
     path('retrieve-subscription/',InsertDeleteRetrieveUpdateSubscription.as_view(),name='retrieve-subscription'),
     path('delete-subscription/<int:id>', InsertDeleteRetrieveUpdateSubscription.as_view(),name='delete-subscription'),
-    path('update-subscription/<int:id>',InsertDeleteRetrieveUpdateSubscription.as_view(),name='update-subscription')
+    path('update-subscription/<int:id>',InsertDeleteRetrieveUpdateSubscription.as_view(),name='update-subscription'),
+    path('create-promo-code/',PromoCode.as_view(),name='create-promo-code'),
+    path('delete-promo-code/<str:id>',PromoCode.as_view(),name='delete-promo-code')
 ]
