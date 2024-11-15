@@ -5,6 +5,8 @@ import stripe
 from django.conf import settings
 from rest_framework import status
 import os
+
+import stripe.error
 from core import *
 from .serializers import *
 from django.utils import timezone
@@ -21,6 +23,7 @@ class CreateCheckoutSession(APIView):
         input_json = request.data
         tier = input_json.get('tier')
         price_id = input_json.get('price_id')
+        promo_code = input_json.get('promo_code')
         price_dict = stripe.Price.retrieve(price_id)
         product_id = price_dict.get('product')
         product_dict = stripe.Product.retrieve(product_id)
@@ -36,12 +39,26 @@ class CreateCheckoutSession(APIView):
                     "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
                     "trial_period_days": 30,
                 }
+            
+            try:                
+                valid_promo_code = stripe.Coupon.retrieve(promo_code).valid
+            except Exception as e:
+                return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)
+    
+            if promo_code is not None and valid_promo_code :
+                discount = [{
+                    'coupon': promo_code,  # Replace with your coupon ID
+                }]
+            else:
+                discount = []
+            print(discount)
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[{
                     'price': price_id,
                     'quantity': 1,
                 }],
+                discounts=discount,
                 mode='subscription',
                 subscription_data = subscription_data,
                 payment_method_collection="if_required" if tier in  ('Trial','Gremadex Trial') else "always",
@@ -49,6 +66,8 @@ class CreateCheckoutSession(APIView):
                 cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
             return Response({'sessionId': session.id,'status':'session_created',"session":session})
+        except stripe.error.StripeError as e:
+            return Response({"error",str(e)})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
         
@@ -320,3 +339,42 @@ class InsertDeleteRetrieveUpdateSubscription(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PromoCode(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+
+        coupon_id = input_json.get("coupon_id")  # The ID of the coupon you want to create
+        applies_to = input_json.get("applies_to")
+        percent_off = input_json.get("percent_off")
+
+        try:
+            # Check if the coupon already exists
+            existing_coupon = stripe.Coupon.retrieve(coupon_id)
+            return Response({'error': 'Coupon with that ID already exists', 'coupon': existing_coupon}, status=status.HTTP_409_CONFLICT)
+        except stripe.error.InvalidRequestError:
+            # Coupon does not exist, create a new one
+            coupon = stripe.Coupon.create(
+                duration="forever",
+                id=coupon_id,
+                percent_off=percent_off,
+                applies_to={'products': applies_to}
+            )
+            return Response({'response': 'Coupon created', 'coupon': coupon}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id):
+        try:
+            coupon_delete = stripe.Coupon.delete(id)
+            return Response({'response': 'Coupon deleted', 'coupon': coupon_delete}, status=status.HTTP_200_OK)
+        except stripe.error.InvalidRequestError as e:
+            # Handle the case where the coupon does not exist
+            if 'No such coupon' in str(e):
+                return Response({'error': 'Coupon does not exist'}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
