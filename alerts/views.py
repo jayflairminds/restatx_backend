@@ -31,10 +31,15 @@ class NotificationManager(APIView):
         input_params = request.query_params
         page = input_params.get('page', 1)  
         n_records = input_params.get('n_records', 10)  # Default records per page to 5 if not provided
+        is_read = input_params.get('is_read')
         user = request.user.id
         
         try:
-            notifications = Notification.objects.filter(notify_to=user, is_read=False).order_by('-created_at')
+            if is_read is not None:
+                notifications = Notification.objects.filter(notify_to=user, is_read=is_read).order_by('-created_at')
+            else:
+                notifications = Notification.objects.filter(notify_to=user).order_by('-created_at')
+
         except Notification.DoesNotExist:
             return Response({"Response": "No Active Notifications exist for the user"}, status=status.HTTP_404_NOT_FOUND)
         
