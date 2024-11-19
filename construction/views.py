@@ -838,6 +838,30 @@ class RetrieveDeleteUpdateDrawTracking(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+    def put(self,request,id):
+        try:
+            my_instance = DrawTracking.objects.get(id=id)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+          # Validate input data to ensure only `title` is provided
+        allowed_fields = {'title'}
+        provided_fields = set(request.data.keys())
+
+        # Check if only the `title` field is being updated
+        if not provided_fields.issubset(allowed_fields):
+            return Response(
+            {"error": f"Only the following fields are editable: {', '.join(allowed_fields)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+        serializer = DrawTrackingSerializer(my_instance,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+
+        
 class DrawTrackingStatus(APIView):
     permission_classes = [IsAuthenticated,subscription]
 
