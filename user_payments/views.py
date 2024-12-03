@@ -39,16 +39,16 @@ class CreateCheckoutSession(APIView):
                     "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
                     "trial_period_days": 30,
                 }
-            
-            try:                
-                valid_promo_code = stripe.Coupon.retrieve(promo_code).valid
-            except Exception as e:
-                return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)
-    
-            if promo_code is not None and valid_promo_code :
-                discount = [{
-                    'coupon': promo_code,  # Replace with your coupon ID
-                }]
+            if promo_code is not None and promo_code != '':
+                try:                
+                    valid_promo_code = stripe.Coupon.retrieve(promo_code).valid
+                except Exception as e:
+                    return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)
+
+                if promo_code is not None and valid_promo_code :
+                    discount = [{
+                        'coupon': promo_code,  # Replace with your coupon ID
+                    }]
             else:
                 discount = []
             print(discount)
@@ -447,3 +447,15 @@ class UpgradeSubscriptionView(APIView):
 
 def get_subscription_details(subscription_id):
     return stripe.Subscription.retrieve(subscription_id)
+
+class ValidatePromoCode(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        input_json = request.data
+        promo_code = input_json.get('promo_code')
+        try:                
+            valid_promo_code = stripe.Coupon.retrieve(promo_code)
+            return Response({"response":valid_promo_code})
+        except Exception as e:
+            return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)

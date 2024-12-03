@@ -13,7 +13,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.conf import settings
 from user_payments.models import Payments,SubscriptionPlan
-
+from rest_framework.exceptions import PermissionDenied
 
 
 def serialize_user(user):
