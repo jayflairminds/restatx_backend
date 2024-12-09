@@ -13,6 +13,15 @@ from io import StringIO
 import mimetypes
 from docx import Document
 from PIL import Image
+import pytesseract 
+from rest_framework import status
+from pdf2image import convert_from_bytes
+import fitz 
+import csv
+from io import StringIO
+import mimetypes
+from docx import Document
+from PIL import Image
 
 class UploadView(APIView):
     def post(self, request):
@@ -193,3 +202,11 @@ class ExtractText(APIView):
         # Unsupported file type
         else:
             return Response({"error": "Unsupported file type."}, status=status.HTTP_400_BAD_REQUEST)  
+        
+
+
+        
+
+
+
+
