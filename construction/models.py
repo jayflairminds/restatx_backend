@@ -163,6 +163,7 @@ class DrawTracking(models.Model):
     requested_date = models.DateTimeField(null=True, blank=True)
     disbursement_date = models.DateTimeField(null=True, blank=True)
     draw_status = models.CharField(max_length=200)
+    title = models.CharField(max_length=512,null=True)
 
     def __str__(self):
         return f"Draw Tracking ID {self.id}"
