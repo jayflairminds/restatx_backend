@@ -193,11 +193,3 @@ class ExtractText(APIView):
         # Unsupported file type
         else:
             return Response({"error": "Unsupported file type."}, status=status.HTTP_400_BAD_REQUEST)  
-        
-
-
-        
-
-
-
-
