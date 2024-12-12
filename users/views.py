@@ -45,6 +45,8 @@ class LoginView(APIView):
             risk_metrics = False
         except SubscriptionPlan.DoesNotExist:
             risk_metrics = False
+        except Exception as e:
+            return Response({"response":e},status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         if profile.role_type == "admin":
             risk_metrics = True
