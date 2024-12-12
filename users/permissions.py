@@ -46,6 +46,8 @@ class subscriptionlimit(BasePermission):
                     return True
                 else:
                     raise CustomAPIException('Subscription plan limit exceeded.')
+            else:
+                return True
 
         except Payments.DoesNotExist:
             raise CustomAPIException('No payment information found for the user.')
