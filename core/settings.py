@@ -81,11 +81,11 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 # For specific URLs
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://restatx.azurewebsites.net",
-    "https://zealous-smoke-06731d000.4.azurestaticapps.net"
-]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "https://restatx.azurewebsites.net",
+#     "https://zealous-smoke-06731d000.4.azurestaticapps.net"
+# ]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
