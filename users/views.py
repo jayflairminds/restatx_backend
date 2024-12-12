@@ -12,8 +12,8 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator 
 from django.utils.http import urlsafe_base64_decode
 from django.conf import settings
-from user_payments.models import Payments
-
+from user_payments.models import Payments,SubscriptionPlan
+from rest_framework.exceptions import PermissionDenied
 
 
 def serialize_user(user):
@@ -36,17 +36,26 @@ class LoginView(APIView):
         try:
             payment = Payments.objects.filter(user=user).order_by('-current_date').first()
             subscription_status = payment.subscription_status if payment else "inactive"
+            if payment is None:
+                raise Payments.DoesNotExist
+            tier = payment.tier
+            risk_metrics = SubscriptionPlan.objects.get(tier=tier).risk_metrics
         except Payments.DoesNotExist:
             subscription_status = "inactive"
-
-
-
+            risk_metrics = False
+        except SubscriptionPlan.DoesNotExist:
+            risk_metrics = False
+        
+        if profile.role_type == "admin":
+            risk_metrics = True
+        
         return Response(
             {
                 "user_data": serialize_user(user),
                 "role_type": profile.role_type,
                 "token": token,
-                 "subscription_status": subscription_status
+                "subscription_status": subscription_status,
+                "risk_metrics":risk_metrics
             }
         )
 

@@ -5,6 +5,8 @@ import stripe
 from django.conf import settings
 from rest_framework import status
 import os
+
+import stripe.error
 from core import *
 from .serializers import *
 from django.utils import timezone
@@ -21,6 +23,7 @@ class CreateCheckoutSession(APIView):
         input_json = request.data
         tier = input_json.get('tier')
         price_id = input_json.get('price_id')
+        promo_code = input_json.get('promo_code')
         price_dict = stripe.Price.retrieve(price_id)
         product_id = price_dict.get('product')
         product_dict = stripe.Product.retrieve(product_id)
@@ -36,19 +39,35 @@ class CreateCheckoutSession(APIView):
                     "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
                     "trial_period_days": 30,
                 }
+            if promo_code is not None and promo_code != '':
+                try:                
+                    valid_promo_code = stripe.Coupon.retrieve(promo_code).valid
+                except Exception as e:
+                    return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)
+
+                if promo_code is not None and valid_promo_code :
+                    discount = [{
+                        'coupon': promo_code,  # Replace with your coupon ID
+                    }]
+            else:
+                discount = []
+            print(discount)
             session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=[{
                     'price': price_id,
                     'quantity': 1,
                 }],
+                discounts=discount,
                 mode='subscription',
                 subscription_data = subscription_data,
-                payment_method_collection="if_required" if tier == 'Trial' else "always",
+                payment_method_collection="if_required" if tier in  ('Trial','Gremadex Trial') else "always",
                 success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
                 cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
             )
             return Response({'sessionId': session.id,'status':'session_created',"session":session})
+        except stripe.error.StripeError as e:
+            return Response({"error",str(e)})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
         
@@ -119,19 +138,22 @@ class ProductList(APIView):
         if request.user.id in list(Payments.objects.values_list('user_id',flat=True)) :
             for product in product_list:
                 for price in price_list:
-                    if product['id'] == price['product']:
+                    if price['id'] == product['default_price']:
                         product["unit_amount"] = float(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
-                        product['currency'] = price['currency']
-            updated_product_list = [i for i in product_list['data'] if i.name != 'Trial']
+                        product['currency'] = price['currency'].upper()
+                        product['type'] = product['type'].capitalize()
+            updated_product_list = [i for i in product_list['data'] if i.name not in ('Trial','Gremadex Trial')]
             product_list['data'] = updated_product_list
             return Response(product_list,status=status.HTTP_200_OK)
         
         else:
             for product in product_list:
                 for price in price_list:
-                    if product['id'] == price['product']:
+                    if price['id'] == product['default_price']:
                         product["unit_amount"] = int(price['unit_amount'])/100 if price['unit_amount'] != 0 else 0
-                        product['currency'] = price['currency']
+                        product['currency'] = price['currency'].upper()
+                        product['type'] = product['type'].capitalize()
+            # product_list = sorted(product_list, key=lambda price: price['unit_amount'])
             return Response(product_list,status=status.HTTP_200_OK)
 
 class PricesList(APIView):
@@ -317,3 +339,123 @@ class InsertDeleteRetrieveUpdateSubscription(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class PromoCode(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        input_json = request.data
+
+        coupon_id = input_json.get("coupon_id")  # The ID of the coupon you want to create
+        applies_to = input_json.get("applies_to")
+        percent_off = input_json.get("percent_off")
+
+        try:
+            # Check if the coupon already exists
+            existing_coupon = stripe.Coupon.retrieve(coupon_id)
+            return Response({'error': 'Coupon with that ID already exists', 'coupon': existing_coupon}, status=status.HTTP_409_CONFLICT)
+        except stripe.error.InvalidRequestError:
+            # Coupon does not exist, create a new one
+            coupon = stripe.Coupon.create(
+                duration="forever",
+                id=coupon_id,
+                percent_off=percent_off,
+                applies_to={'products': applies_to}
+            )
+            return Response({'response': 'Coupon created', 'coupon': coupon}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, id):
+        try:
+            coupon_delete = stripe.Coupon.delete(id)
+            return Response({'response': 'Coupon deleted', 'coupon': coupon_delete}, status=status.HTTP_200_OK)
+        except stripe.error.InvalidRequestError as e:
+            # Handle the case where the coupon does not exist
+            if 'No such coupon' in str(e):
+                return Response({'error': 'Coupon does not exist'}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST) 
+    
+class UpgradeSubscriptionView(APIView):
+    permission_classes = [IsAuthenticated, subscription]
+
+    def post(self, request):
+        # Get the subscription and new price ID from the request data
+        subscription_id = request.data.get('subscription_id')
+        new_price_id = request.data.get('new_price_id')
+
+        # Validate the input
+        if not subscription_id or not new_price_id:
+            return Response({"error": "Subscription ID and new price ID are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Retrieve the current subscription
+            subscription = stripe.Subscription.retrieve(subscription_id)
+
+            # Upgrade the subscription and apply prorated credit
+            updated_subscription = stripe.Subscription.modify(
+                subscription_id,
+                items=[{
+                    "id": subscription['items']['data'][0].id,
+                    "price": new_price_id,  # Set new plan price ID here
+                }],
+                proration_behavior="create_prorations",  # Apply remaining balance
+            )
+             # Retrieve the updated subscription to verify
+            subscription_after_update = stripe.Subscription.retrieve(subscription_id)
+
+            # Check the new price_id to confirm it's now set to Premium
+            current_price_id = subscription_after_update['items']['data'][0]['price']['id']
+            print('current_price_id',current_price_id)
+
+            # Retrieve the latest invoice, which should reflect the prorated amount
+            latest_invoice_id = updated_subscription['latest_invoice']
+            print("latest_invoice_id",latest_invoice_id)
+            latest_invoice = stripe.Invoice.retrieve(latest_invoice_id) if latest_invoice_id else None
+            print(latest_invoice.amount_due,latest_invoice.amount_paid)
+            print(latest_invoice['lines']['data'][0]['price']['id'])
+            # Check if there's a remaining balance in the latest invoice
+            if latest_invoice and latest_invoice['amount_due'] > 0:
+                # Create a checkout session to collect the remaining payment
+                session = stripe.checkout.Session.create(
+                    payment_method_types=['card'],
+                    line_items=[{
+                        'price': latest_invoice['lines']['data'][0]['price']['id'],  # The price ID from the invoice
+                        'quantity': 1,
+                    }],
+                    mode='subscription',
+                    success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
+                    cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
+                )
+                # Return session ID to the client so they can pay the remaining amount
+                return Response({"session":session}, status=status.HTTP_200_OK)
+
+            # If no remaining balance, simply return the updated subscription
+            return Response({
+                "updated_subscription": updated_subscription,
+                "latest_invoice": latest_invoice
+            }, status=status.HTTP_200_OK)
+
+        except stripe.error.StripeError as e:
+            # Handle Stripe error
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+
+def get_subscription_details(subscription_id):
+    return stripe.Subscription.retrieve(subscription_id)
+
+class ValidatePromoCode(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self,request):
+        input_json = request.data
+        promo_code = input_json.get('promo_code')
+        try:                
+            valid_promo_code = stripe.Coupon.retrieve(promo_code)
+            return Response({"response":valid_promo_code})
+        except Exception as e:
+            return Response({'response':'No such coupon available'},status=status.HTTP_404_NOT_FOUND)

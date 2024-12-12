@@ -7,7 +7,7 @@ from .models import *
 from rest_framework.views import APIView,View
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Loan
+from .models import Loan,UsesMapping
 from document_management.models import *
 from .serializers import *
 import datetime
@@ -24,6 +24,9 @@ from io import BytesIO
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, PageBreak
 from reportlab.lib import colors
 from users.permissions import subscription,subscriptionlimit
+from django.http import JsonResponse
+from document_management.serializers import DrawDocumentsSerializer
+from document_management.views import ListOfDocument
 
 class LoanListView(generics.ListAPIView):
     serializer_class = LoanSerializer
@@ -420,7 +423,7 @@ class ProjectList(generics.ListAPIView):
         return project
     
 class CreateRetrieveUpdateLoan(APIView):
-    permission_classes = [IsAuthenticated,subscription]
+    permission_classes = [IsAuthenticated,subscription,subscriptionlimit]
 
     def post(self,request):
         input_json = request.data
@@ -510,7 +513,28 @@ class UsesListView(APIView):
 
             with open(file_path,'r') as file:
                 uses_dictionary = json.load(file)
-                response = uses_dictionary.get(project_type)
+             
+            # Get the uses list for the specified project_type from JSON
+            uses_list = uses_dictionary.get(project_type, {})
+
+            uses_mapping = UsesMapping.objects.filter(project_type=project_type)
+            
+            serialized_data = UsesMappingSerializer(uses_mapping,many=True).data
+             
+            response_data = {}
+            for item in serialized_data:
+                uses_type = item["uses_type"]
+                if uses_type not in response_data:
+                    response_data[uses_type] = []
+                 # Add the "use" and "is_locked" information to each `uses_type` group
+                response_data[uses_type].append({
+                    "use": item["uses"],
+                    "is_locked": item["is_locked"]
+                })
+
+             # Wrap the data in a response dictionary
+            response = {"response": response_data}
+
             return Response(response)
         except Loan.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND) 
@@ -817,6 +841,30 @@ class RetrieveDeleteUpdateDrawTracking(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
+    def put(self,request,id):
+        try:
+            my_instance = DrawTracking.objects.get(id=id)
+        except DrawTracking.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+          # Validate input data to ensure only `title` is provided
+        allowed_fields = {'title'}
+        provided_fields = set(request.data.keys())
+
+        # Check if only the `title` field is being updated
+        if not provided_fields.issubset(allowed_fields):
+            return Response(
+            {"error": f"Only the following fields are editable: {', '.join(allowed_fields)}"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+        serializer = DrawTrackingSerializer(my_instance,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+
+        
 class DrawTrackingStatus(APIView):
     permission_classes = [IsAuthenticated,subscription]
 
@@ -1095,4 +1143,143 @@ class ExportBudgetToExcel(APIView):
             with pd.ExcelWriter(response, engine='xlsxwriter') as writer:
                 df.to_excel(writer, index=False, sheet_name='BudgetData')
 
-            return response
+            return response 
+        
+class CreateRetrieveDeleteUsesMapping(APIView):
+
+    permission_classes = [IsAuthenticated,subscription]
+
+
+    def get(self,request):
+        input_params = request.query_params
+        project_type = input_params.get('project_type')
+        if project_type:
+            my_instance = UsesMapping.objects.filter(project_type=project_type).order_by('uses_type','uses')
+        else:           
+            my_instance = UsesMapping.objects.all().order_by('project_type','uses_type','uses')
+        serializer = UsesMappingSerializer(my_instance,many=True)
+        return Response(serializer.data,status=201) 
+    
+    def post(self, request):
+        serializer = UsesMappingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    
+    def put(self, request, id):
+        try:
+            use_mapping = UsesMapping.objects.get(pk=id)
+        except UsesMapping.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = UsesMappingSerializer(use_mapping, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
+    
+
+    def delete(self, request, id):
+        try:
+            use_mapping = UsesMapping.objects.get(pk=id)
+        except UsesMapping.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        use_mapping.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DrawDocumentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request,loan_id):
+
+        try:            
+            # Fetch the loan instance
+            loan = Loan.objects.get(loanid=loan_id)
+            
+            # Fetch related DrawTracking entries
+            draw_tracking_entries = DrawTracking.objects.filter(loan_id=loan.loanid)
+            # print('draw_tracking_entries',draw_tracking_entries)
+
+            # if not draw_tracking_entries:
+            #     return Response({"message": "No draw request exists for this loan."},status=status.HTTP_404_NOT_FOUND)
+            
+            response_data = {}
+            if draw_tracking_entries.exists():
+            # Process each draw request
+                for draw_tracking in draw_tracking_entries:
+                    draw_request = draw_tracking.draw_request  # Assuming `draw_request` is a field in DrawTracking                   
+                # Fetch related DrawDocuments
+                    draw_documents = DrawDocuments.objects.filter(draw_tracking_id=draw_tracking.id)
+                
+                # Serialize the DrawDocuments
+                    serializers = DrawDocumentsSerializer(draw_documents, many=True)
+                                 
+                # Add the serialized data to the response dictionary
+                    response_data[draw_request] = serializers.data
+
+            return Response(response_data, status=status.HTTP_200_OK)               
+            
+        except Loan.DoesNotExist:
+            return JsonResponse({"error": "Loan not found."}, status=404)   
+
+
+class DrawTrackingAndChecklistView(APIView):
+    def get(self, request):
+        try:
+            # Extract loan_id from query parameters 
+            input_params = request.query_params
+            loan_id = input_params.get("loan_id")
+
+            if not loan_id:
+                return Response({"error": "loan_id is required"}, status=400)
+
+            # Fetch DrawTracking entries associated with the loan
+            draw_tracking_entries = DrawTracking.objects.filter(loan_id=loan_id).order_by('id')
+
+            # Call the get method of ListOfDocument API
+            document_checklist_response = ListOfDocument().get(request)
+
+            # Check if the call was successful
+            if document_checklist_response.status_code != 200:
+                return Response(
+                    {"error": "Failed to fetch document checklist"},
+                    status=document_checklist_response.status_code
+                )
+
+            response_data = {
+                "show_draw_documents": False,
+                "draw_documents": [],
+                "document_checklist": document_checklist_response.data
+            }
+
+            # Check if there are any DrawTracking entries (indicating draw requests)
+            if draw_tracking_entries.exists():
+                response_data["show_draw_documents"] = True  # Enable dropdown for draw documents
+
+                # Process each DrawTracking entry
+                draw_documents_list = []
+                for draw_tracking in draw_tracking_entries:
+                    # Serialize DrawTracking data
+                    draw_tracking_data = DrawTrackingSerializer(draw_tracking).data
+
+                    # Fetch related DrawRequestDocuments
+                    draw_request_documents = DrawDocuments.objects.filter(draw_tracking_id=draw_tracking.id)
+                    
+                    # Serialize DrawRequestDocuments
+                    draw_tracking_data["documents"] = DrawDocumentsSerializer(
+                        draw_request_documents, many=True
+                    ).data
+
+                    # Append to the draw_documents list
+                    draw_documents_list.append(draw_tracking_data)
+
+                response_data["draw_documents"] = draw_documents_list
+
+            return Response(response_data, status=200)
+
+        except Loan.DoesNotExist:
+            return Response({"message": "Loan not found."}, status=status.HTTP_404_NOT_FOUND)
+
