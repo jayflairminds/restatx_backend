@@ -81,10 +81,10 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 # For specific URLs
-# CORS_ALLOWED_ORIGINS = [
-#     'https://example.com',
-#     'https://another-domain.com',
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "https://restatx.azurewebsites.net"
+]
 
 ROOT_URLCONF = "core.urls"
 
