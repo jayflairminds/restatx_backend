@@ -83,8 +83,12 @@ CORS_ALLOW_METHODS = [
 # For specific URLs
 CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
-    "https://restatx.azurewebsites.net"
+    "https://restatx.azurewebsites.net",
+    "https://zealous-smoke-06731d000.4.azurestaticapps.net"
 ]
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 ROOT_URLCONF = "core.urls"
 
