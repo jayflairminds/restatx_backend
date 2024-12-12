@@ -27,7 +27,13 @@ SECRET_KEY = "django-insecure-z9l*oq)v(agbsp3uj%^wat4t4oer=og5btdnzj-tezxuisoiob
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "restatx.azurewebsites.net",
+    "zealous-smoke-06731d000.4.azurestaticapps.net",
+]
+
 
 
 # Application definition
@@ -59,9 +65,9 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.common.CommonMiddleware"
-]
+    "django.middleware.clickjacking.XFrameOptionsMiddleware"
+    
+    ]
 
 # CORS_ORIGIN_ALLOW_ALL = True 
 # CORS_ALLOW_ALL_ORIGINS = True
@@ -82,10 +88,10 @@ CORS_ALLOW_METHODS = [
 ]
 # For specific URLs
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1/5173"
-    "https://restatx.azurewebsites.net",
-    "https://zealous-smoke-06731d000.4.azurestaticapps.net"
+    "http://localhost:5173",  # Local development
+    "http://127.0.0.1:5173",  # Alternative local
+    "https://restatx.azurewebsites.net",  # Backend deployed on Azure
+    "https://zealous-smoke-06731d000.4.azurestaticapps.net"  # Frontend deployed on Azure
 ]
 
 SESSION_COOKIE_SECURE = True
