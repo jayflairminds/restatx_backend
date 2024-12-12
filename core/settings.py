@@ -63,8 +63,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware"
 ]
 
-CORS_ORIGIN_ALLOW_ALL = True 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ORIGIN_ALLOW_ALL = True 
+# CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "authorization",
@@ -81,11 +81,12 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 # For specific URLs
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "https://restatx.azurewebsites.net",
-#     "https://zealous-smoke-06731d000.4.azurestaticapps.net"
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1/5173"
+    "https://restatx.azurewebsites.net",
+    "https://zealous-smoke-06731d000.4.azurestaticapps.net"
+]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
