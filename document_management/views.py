@@ -30,7 +30,10 @@ import mimetypes
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
+# local
+# client = MongoClient(settings.MONGODB['HOST'], settings.MONGODB['PORT'])
+# Mongo Atlas
+client = MongoClient(settings.MONGODB['URI'])
 db = client[settings.MONGODB['NAME']]
 fs = gridfs.GridFS(db)
 

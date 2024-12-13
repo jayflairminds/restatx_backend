@@ -135,16 +135,18 @@ STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 WEBHOOK_SIGNING_SECRET = os.getenv("WEBHOOK_SIGNING_SECRET")
 
+MONGODB = {
+    'URI': f"mongodb+srv://{os.getenv('MONGODB_USERNAME')}:{os.getenv('MONGODB_PASSWORD')}@cluster0.jfno3.mongodb.net/",
+    'NAME': os.getenv('MONGODB_DATABASE_NAME')
+}
+
 # MONGODB = {
-#     'URI': f"mongodb+srv://{os.getenv('MONGODB_USERNAME')}:{os.getenv('MONGODB_PASSWORD')}@cluster0.jfno3.mongodb.net/",
-#     'DATABASE_NAME': os.getenv('MONGODB_DATABASE_NAME')
+#     'NAME': os.getenv('MONGODB_DATABASE_NAME'),
+#     'HOST': os.getenv('MONGODB_DATABASE_HOST'),
+#     'PORT': int(os.getenv('MONGODB_PORT')),
 # }
 
-MONGODB = {
-    'NAME': os.getenv('MONGODB_DATABASE_NAME'),
-    'HOST': os.getenv('MONGODB_DATABASE_HOST'),
-    'PORT': int(os.getenv('MONGODB_PORT')),
-}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
