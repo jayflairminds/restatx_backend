@@ -62,8 +62,8 @@ class CreateCheckoutSession(APIView):
                 mode='subscription',
                 subscription_data = subscription_data,
                 payment_method_collection="if_required" if tier in  ('Trial','Gremadex Trial') else "always",
-                success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
-                cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
+                success_url=f"{os.getenv('FRONTEND_URL')}/success?" + 'sessionid={CHECKOUT_SESSION_ID}',
+                cancel_url=f"{os.getenv('FRONTEND_URL')}/cancel?" + 'sessionid={CHECKOUT_SESSION_ID}'
             )
             return Response({'sessionId': session.id,'status':'session_created',"session":session})
         except stripe.error.StripeError as e:
@@ -427,8 +427,8 @@ class UpgradeSubscriptionView(APIView):
                         'quantity': 1,
                     }],
                     mode='subscription',
-                    success_url='https://glasdex.com/success?sessionid={CHECKOUT_SESSION_ID}',
-                    cancel_url='https://glasdex.com/cancel?sessionid={CHECKOUT_SESSION_ID}'
+                    success_url=f"{os.getenv('FRONTEND_URL')}/success?" + 'sessionid={CHECKOUT_SESSION_ID}',
+                    cancel_url=f"{os.getenv('FRONTEND_URL')}/cancel?" + 'sessionid={CHECKOUT_SESSION_ID}'
                 )
                 # Return session ID to the client so they can pay the remaining amount
                 return Response({"session":session}, status=status.HTTP_200_OK)
