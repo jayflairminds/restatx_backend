@@ -32,6 +32,8 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "restatx.azurewebsites.net",
     "zealous-smoke-06731d000.4.azurestaticapps.net",
+    "app.restatx.com",
+    "restatx.flairminds.com"
 ]
 
 
@@ -91,7 +93,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Local development
     "http://127.0.0.1:5173",  # Alternative local
     "https://restatx.azurewebsites.net",  # Backend deployed on Azure
-    "https://zealous-smoke-06731d000.4.azurestaticapps.net"  # Frontend deployed on Azure
+    "https://zealous-smoke-06731d000.4.azurestaticapps.net",  # Frontend deployed on Azure
+    "app.restatx.com",
+    "restatx.flairminds.com"
 ]
 
 SESSION_COOKIE_SECURE = True
